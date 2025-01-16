@@ -7,8 +7,6 @@
 #include "MTi.h"
 #include <Wire.h>
 
-//Test
-
 #define DRDY 3       // Data Ready Pin
 #define ADDRESS 0x6B // I2C-Adresse des MTi-3
 
