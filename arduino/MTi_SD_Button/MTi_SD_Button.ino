@@ -4,6 +4,7 @@
 #include "SPI.h"
 #include "MTi.h"
 #include <Wire.h>
+#include <EEPROM.h>
 
 #define DRDY 3        // Arduino Digital IO pin for MTi-DRDY
 #define ADDRESS 0x6B  // MTi I2C address (default for MTi 1-series)
@@ -17,6 +18,11 @@ unsigned long lastDebounceTime = 0;
 volatile bool buttonPressed = false; // Zustandsvariable für Taster
 const unsigned long debounceDelay = 50; // Entprellzeit in Millisekunden
 int count = 0;
+
+const int EEPROM_ADDRESS = 0;
+uint16_t fileCounter = 0;             // Datei-Zähler (aus dem EEPROM)
+uint16_t recordCounter = 0;           // Aufnahme-Zähler (nur im RAM, reset bei jedem Neustart)
+String currentFileName;               // Aktueller Dateiname 
 
 void listDir(fs::FS &fs, const char * dirname, uint8_t levels){
     Serial.printf("Listing directory: %s\n", dirname);
@@ -175,6 +181,101 @@ void testFileIO(fs::FS &fs, const char * path){
     file.close();
 }
 
+void startNewMeasurement() {
+  // Dateiname erzeugen, z. B. "messung_0000.txt"
+  // Die 4 steht für 4-stellige Darstellung (z. B. 0001, 0002 usw.)
+  char filename[20];
+  sprintf(filename, "/messung_%04u.txt", fileCounter);
+  
+  // Datei anlegen
+  File file = SD.open(filename, FILE_WRITE);
+  if (file) {
+    file.println("Neue Messung gestartet!");
+    file.close();
+    Serial.print("Neue Datei erstellt: ");
+    Serial.println(filename);
+    
+    // Counter erhöhen und im EEPROM speichern
+    fileCounter++;
+    EEPROM.put(EEPROM_ADDRESS, fileCounter);
+    Serial.print("Neuer Zählerstand: ");
+    Serial.println(fileCounter);
+  } else {
+    Serial.print("Fehler beim Erstellen der Datei: ");
+    Serial.println(filename);
+  }
+}
+
+void startMeasurement() {
+  isMeasuring = true;
+  recordCounter++;
+
+  // Ins File schreiben, dass eine neue Aufnahme gestartet wurde
+  File file = SD.open(currentFileName, FILE_APPEND);
+  if (file) {
+    file.println(">>>> Aufnahme " + String(recordCounter) + " START <<<<");
+    file.close();
+    Serial.println("Aufnahme " + String(recordCounter) + " gestartet.");
+  } else {
+    Serial.println("Fehler beim Oeffnen der Datei (START).");
+  }
+  
+  // LED als Status
+  digitalWrite(LED_BUILTIN, HIGH);
+}
+
+/**
+ * Beendet die aktuelle Aufnahme.
+ */
+void stopMeasurement() {
+  if (isMeasuring) {
+    // Logge STOPP ins File
+    File file = SD.open(currentFileName, FILE_APPEND);
+    if (file) {
+      file.println(">>>> Aufnahme " + String(recordCounter) + " STOPP <<<<");
+      file.close();
+      Serial.println("Aufnahme " + String(recordCounter) + " gestoppt.");
+    } else {
+      Serial.println("Fehler beim Oeffnen der Datei (STOPP).");
+    }
+    isMeasuring = false;
+  }
+
+  // LED aus
+  digitalWrite(LED_BUILTIN, LOW);
+}
+
+/**
+ * Schreibt die aktuellen Sensordaten in die Datei, 
+ * solange isMeasuring = true.
+ */
+void logMeasurementData() {
+  // Hier kannst du beliebig viele Sensorwerte einfügen
+  char cnt[32];
+  dtostrf(count, 8, 2, cnt);
+
+  // An die Datei anhängen
+  File file = SD.open(currentFileName, FILE_APPEND);
+  if (file) {
+    // Beispiel: Zähler + Beschleunigung in x, y, z
+    file.print(cnt);
+    file.print(" ; Acceleration [m/s^2]: ");
+
+    for (int i = 0; i < 3; ++i) {
+      char str[32];
+      dtostrf(MyMTi->getAcceleration()[i], 8, 2, str);
+      file.print(str);
+      if (i < 2) file.print(" ");
+    }
+    file.println(); // Zeilenumbruch
+
+    file.close();
+    //Serial.println("Daten geloggt"); // optional
+  } else {
+    Serial.println("Fehler beim Oeffnen der Datei (logData).");
+  }
+}
+
 void IRAM_ATTR handleButtonPress() {
   // Interrupt Service Routine für den Taster
   unsigned long currentTime = millis();
@@ -186,19 +287,13 @@ void IRAM_ATTR handleButtonPress() {
 
 void setup() {
   Serial.begin(115200);  // Initialize serial communication
+  EEPROM.begin(512); // Bereich reservieren (z.B. 512 Bytes)
   Wire.begin();          // Initialize Wire library for I2C communication
   pinMode(DRDY, INPUT);  // Data Ready pin
   pinMode(buttonPin, INPUT_PULLUP); // Taster mit Pullup
   pinMode(LED_BUILTIN, OUTPUT); // LED für Statusanzeige
 
   attachInterrupt(digitalPinToInterrupt(buttonPin), handleButtonPress, FALLING);
-
-  if (!SD.begin()) {
-    Serial.println("SD-Karte konnte nicht initialisiert werden.");
-    return;
-  }
-
-  writeFile(SD, "/data.txt", ""); // Erstelle leere Datei auf SD-Karte
 
   MyMTi = new MTi(ADDRESS, DRDY); // MTi-Objekt erstellen
 
@@ -210,16 +305,47 @@ void setup() {
     MyMTi->requestDeviceInfo();
     MyMTi->configureOutputs();
     MyMTi->goToMeasurement();
+  }  
+  
+  if (!SD.begin()) {
+    Serial.println("SD-Karte konnte nicht initialisiert werden.");
+    return;
   }
+
+  EEPROM.get(EEPROM_ADDRESS, fileCounter);
+  Serial.print("Aktueller Zählerstand: ");
+  Serial.println(fileCounter);
+  
+  char filename[32];
+  sprintf(filename, "/messung_%04u.txt", fileCounter);
+  currentFileName = String(filename);
+
+   // Datei erstellen
+  File file = SD.open(currentFileName, FILE_WRITE);
+  if (!file) {
+    Serial.println("Fehler beim Erstellen der neuen Datei!");
+  } else {
+    file.close();
+
+    Serial.println("Neue Datei erstellt: " + currentFileName);
+  }
+
+  fileCounter++;
+  EEPROM.put(EEPROM_ADDRESS, fileCounter);
+  EEPROM.commit();
+  Serial.print("Neuer Datei-Zaehler: ");
+  Serial.println(fileCounter);
 }
 
 void loop() {
   // Tasterzustand auslesen und entprellen
   if (buttonPressed) { // Nur reagieren, wenn der Button über den Interrupt gesetzt wurde
     buttonPressed = false; // Zustand zurücksetzen
-    isMeasuring = !isMeasuring; // Zustand toggeln
-    digitalWrite(LED_BUILTIN, isMeasuring ? HIGH : LOW); // LED an/aus
-    Serial.println(isMeasuring ? "Messung gestartet" : "Messung gestoppt");
+    if (!isMeasuring) {
+      startMeasurement(); 
+    } else {
+      stopMeasurement();
+    }
   }
 
   // Messung ausführen, wenn aktiv
@@ -227,19 +353,9 @@ void loop() {
     MyMTi->readMessages();
     //MyMTi->printData();
 
-    if (!isnan(MyMTi->getEulerAngles()[0])) {
+    if (!isnan(MyMTi->getAcceleration()[0])) {
       count++;
-      char cnt[32];
-      dtostrf(count, 8, 2, cnt);
-      appendFile(SD, "/data.txt", cnt);
-      appendFile(SD, "/data.txt", " ; Euler angles [deg]: ");
-      for (int i = 0; i < 3; ++i) {
-        char str[32];
-        dtostrf(MyMTi->getEulerAngles()[i], 8, 2, str);
-        appendFile(SD, "/data.txt", str);
-        appendFile(SD, "/data.txt", (i == 2) ? "\n" : " ");
-      }
-      //Serial.println("Daten aufgezeichnet.");
+      logMeasurementData();
     }
   }
   delay(10);
