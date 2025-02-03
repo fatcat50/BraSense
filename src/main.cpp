@@ -1,5 +1,5 @@
 #include "Arduino.h"
-#include "FS.h"
+//#include "FS.h"
 #include "SD.h"
 #include "SPI.h"
 #include "MTi.h"
@@ -10,7 +10,6 @@
 #include <ESPAsyncWebServer.h>
 #include "LittleFS.h"
 #include <Arduino_JSON.h>
-#include "esp_mac.h"
 
 #define DRDY 3        // Arduino Digital IO pin for MTi-DRDY
 #define ADDRESS 0x6B  // MTi I2C address (default for MTi 1-series)
