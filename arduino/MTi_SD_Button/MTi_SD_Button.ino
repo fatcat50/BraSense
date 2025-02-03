@@ -5,10 +5,18 @@
 #include "MTi.h"
 #include <Wire.h>
 #include <EEPROM.h>
+#include <WiFi.h>
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include "LittleFS.h"
+#include <Arduino_JSON.h>
 
 #define DRDY 3        // Arduino Digital IO pin for MTi-DRDY
 #define ADDRESS 0x6B  // MTi I2C address (default for MTi 1-series)
 MTi *MyMTi = NULL;
+
+const char *ssid = "WLAN-Kornfeind";
+const char *password = "Vbk70Mfk75Kvh96Mfk00";
 
 const byte buttonPin = 2;         // Taster-Pin
 bool isMeasuring = false;         // Zustandsvariable für Messung
@@ -23,6 +31,78 @@ const int EEPROM_ADDRESS = 0;
 uint16_t fileCounter = 0;    // Datei-Zähler (aus dem EEPROM)
 uint16_t recordCounter = 0;  // Aufnahme-Zähler (nur im RAM, reset bei jedem Neustart)
 String currentFileName;      // Aktueller Dateiname
+
+// Create AsyncWebServer object on port 80
+AsyncWebServer server(80);
+
+// Create a WebSocket object
+AsyncWebSocket ws("/ws");
+
+// Json Variable to Hold Sensor Readings
+JSONVar readings;
+
+// Timer variables
+unsigned long lastTime = 0;
+unsigned long timerDelay = 30000;
+
+void initLittleFS() {
+  if (!LittleFS.begin(true)) {
+    Serial.println("An error has occurred while mounting LittleFS");
+  }
+  Serial.println("LittleFS mounted successfully");
+}
+
+void initWiFi() {
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  Serial.print("Connecting to WiFi ..");
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print('.');
+    delay(1000);
+  }
+  Serial.println(WiFi.localIP());
+}
+
+void notifyClients(String sensorReadings) {
+  ws.textAll(sensorReadings);
+}
+
+void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
+  AwsFrameInfo *info = (AwsFrameInfo *)arg;
+  if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
+    //data[len] = 0;
+    //String message = (char*)data;
+    // Check if the message is "getReadings"
+    //if (strcmp((char*)data, "getReadings") == 0) {
+    //if it is, send current sensor readings
+    /*String sensorReadings = getSensorReadings();
+    Serial.print(sensorReadings);
+    notifyClients(sensorReadings);*/
+    //}
+  }
+}
+
+void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
+  switch (type) {
+    case WS_EVT_CONNECT:
+      Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+      break;
+    case WS_EVT_DISCONNECT:
+      Serial.printf("WebSocket client #%u disconnected\n", client->id());
+      break;
+    case WS_EVT_DATA:
+      handleWebSocketMessage(arg, data, len);
+      break;
+    case WS_EVT_PONG:
+    case WS_EVT_ERROR:
+      break;
+  }
+}
+
+void initWebSocket() {
+  ws.onEvent(onEvent);
+  server.addHandler(&ws);
+}
 
 void listDir(fs::FS &fs, const char *dirname, uint8_t levels) {
   Serial.printf("Listing directory: %s\n", dirname);
@@ -270,6 +350,9 @@ void IRAM_ATTR handleButtonPress() {
 
 void setup() {
   Serial.begin(115200);
+  initWiFi();
+  initLittleFS();
+  initWebSocket();
   EEPROM.begin(512);  // Bereich reservieren
   Wire.begin();
   pinMode(DRDY, INPUT);
@@ -279,6 +362,16 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(buttonPin), handleButtonPress, FALLING);
 
   MyMTi = new MTi(ADDRESS, DRDY);
+
+  // Web Server Root URL
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(LittleFS, "/index.html", "text/html");
+  });
+
+  server.serveStatic("/", LittleFS, "/");
+
+  // Start server
+  server.begin();
 
   if (!MyMTi->detect(1000)) {
     Serial.println("MTi nicht erkannt. Überprüfen Sie die Verbindungen.");
@@ -339,5 +432,12 @@ void loop() {
       logMeasurementData();
     }
   }
+  /*if ((millis() - lastTime) > timerDelay) {
+    String sensorReadings = getSensorReadings();
+    Serial.print(sensorReadings);
+    notifyClients(sensorReadings);
+    lastTime = millis();
+  }*/
+  ws.cleanupClients();
   delay(10);
 }
