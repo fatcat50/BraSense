@@ -45,10 +45,11 @@ unsigned long lastTime = 0;
 unsigned long timerDelay = 30000;
 
 void initLittleFS() {
-  if (!LittleFS.begin(true)) {
+  if (!LittleFS.begin()) {
     Serial.println("An error has occurred while mounting LittleFS");
+  } else {
+    Serial.println("LittleFS mounted successfully");
   }
-  Serial.println("LittleFS mounted successfully");
 }
 
 void initWiFi() {
