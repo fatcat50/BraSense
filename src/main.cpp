@@ -2,6 +2,7 @@
 #include <WiFi.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
+#include <Wire.h>
 #include "index.h"
 #include "websocket_handler.h"
 #include "sd_handler.h"
@@ -9,54 +10,56 @@
 
 #define BUTTON_PIN 2
 
-const char *ssid = "WLAN-Kornfeind";
-const char *password = "Vbk70Mfk75Kvh96Mfk00";
-
 volatile bool buttonPressed = false;
-AsyncWebServer server(80);
 
-void IRAM_ATTR handleButtonPress() {
+void IRAM_ATTR handleButtonPress()
+{
     buttonPressed = true;
 }
 
-void setup() {
+void setup()
+{
     Serial.begin(115200);
     pinMode(BUTTON_PIN, INPUT_PULLUP);
+    pinMode(3, INPUT);
+    pinMode(LED_BUILTIN, OUTPUT);
+    digitalWrite(LED_BUILTIN, LOW);
     attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), handleButtonPress, FALLING);
-
-    Serial.print("Connecting to WiFi...");
-    WiFi.begin(ssid, password);
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(1000);
-        Serial.print(".");
-    }
-    Serial.println("\nConnected!");
-    Serial.print("IP Address: ");
-    Serial.println(WiFi.localIP());
-
-    setupWebSocket(server);
-    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-        //request->send_P(200, "text/html", index_html, processor);
-    });
-    server.begin();
-
-    if (!initSDCard()) return;
+    
+    EEPROM.begin(128);
+    Wire.begin();
+    initWiFi();
+    setupWebSocket();
+    initMTi();
+    initSDCard();
     loadFileCounter();
     createNewMeasurementFile();
-
-    initMTi();
 }
 
-void loop() {
-    if (buttonPressed) {
+void loop()
+{
+    if (buttonPressed)
+    {
         buttonPressed = false;
-        if (!isMeasuring) {
+        if (!isMeasuring)
+        {
             startMeasurement();
-        } else {
+        }
+        else
+        {
             stopMeasurement();
         }
     }
-    if (isMeasuring) {
-        logMeasurementData();
+    if (isMeasuring && digitalRead(MyMTi->drdy))
+    {
+        MyMTi->readMessages();
+
+        if (!isnan(MyMTi->getAcceleration()[0]))
+        {
+            measurementCounter++;
+            logMeasurementData();
+        }
     }
+    ws.cleanupClients();
+    delay(10);
 }

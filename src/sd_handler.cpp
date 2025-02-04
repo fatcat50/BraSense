@@ -13,15 +13,8 @@ bool initSDCard() {
 }
 
 void loadFileCounter() {
-    EEPROM.begin(128);
     EEPROM.get(0, fileCounter);
-
-    if (fileCounter == 0xFFFF || fileCounter == 0) {  
-        Serial.println("EEPROM leer, setze fileCounter auf 1");
-        fileCounter = 1;
-        saveFileCounter();
-    }
-    Serial.print("Geladener Datei-Zähler: ");
+    Serial.print("Aktueller Datei-Zähler: ");
     Serial.println(fileCounter);
 }
 
@@ -47,4 +40,15 @@ void createNewMeasurementFile() {
 
     fileCounter++;
     saveFileCounter();
+}
+
+void appendFile(fs::FS &fs, const char *path, const char *message) {
+    File file = fs.open(path, FILE_APPEND);
+    if (!file) {
+        Serial.println("Failed to open file for appending");
+        return;
+    }
+    file.print(message);
+    file.close();
+    Serial.println("Message appended successfully");
 }

@@ -1,7 +1,7 @@
 #ifndef INDEX_H
 #define INDEX_H
 
-const char index_html[] = R"rawliteral(
+const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html>
   <head>

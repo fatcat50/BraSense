@@ -12,5 +12,6 @@ bool initSDCard();
 void loadFileCounter();
 void saveFileCounter();
 void createNewMeasurementFile();
+void appendFile(fs::FS &fs, const char *path, const char *message);
 
 #endif // SD_HANDLER_H
