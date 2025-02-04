@@ -25,7 +25,7 @@ void setup()
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, LOW);
     attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), handleButtonPress, FALLING);
-    
+
     EEPROM.begin(128);
     Wire.begin();
     initWiFi();
