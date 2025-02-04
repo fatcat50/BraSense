@@ -4,13 +4,12 @@
 const char *ssid = "WLAN-Kornfeind";
 const char *password = "Vbk70Mfk75Kvh96Mfk00";
 
-bool ledState = false;
+bool ledState = 0;
 AsyncWebSocket ws("/ws");
 AsyncWebServer server(80);
 
 void initWiFi()
 {
-    WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);
     Serial.print("Connecting to WiFi ..");
     while (WiFi.status() != WL_CONNECTED)
@@ -19,6 +18,15 @@ void initWiFi()
         delay(1000);
     }
     Serial.println(WiFi.localIP());
+}
+
+void setupWebSocket()
+{
+    ws.onEvent(eventHandler);
+    server.addHandler(&ws);
+    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+              { request->send_P(200, "text/html", index_html, processor); });
+    server.begin();
 }
 
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
@@ -40,7 +48,7 @@ void eventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEvent
     switch (type)
     {
     case WS_EVT_CONNECT:
-        Serial.printf("WebSocket client #%u connected\n", client->id());
+        Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
         break;
     case WS_EVT_DISCONNECT:
         Serial.printf("WebSocket client #%u disconnected\n", client->id());
@@ -53,15 +61,6 @@ void eventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEvent
     case WS_EVT_ERROR:
         break;
     }
-}
-
-void setupWebSocket()
-{
-    ws.onEvent(eventHandler);
-    server.addHandler(&ws);
-    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-              { request->send_P(200, "text/html", index_html, processor); });
-    server.begin();
 }
 
 String processor(const String &var)
