@@ -4,9 +4,6 @@
 #include <Arduino.h>
 #include <ESPAsyncWebServer.h>
 
-const char *ssid = "WLAN-Kornfeind";
-const char *password = "Vbk70Mfk75Kvh96Mfk00";
-
 extern bool ledState;
 extern AsyncWebSocket ws;
 
