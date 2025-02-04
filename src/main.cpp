@@ -9,6 +9,9 @@
 
 #define BUTTON_PIN 2
 
+const char *ssid = "WLAN-Kornfeind";
+const char *password = "Vbk70Mfk75Kvh96Mfk00";
+
 volatile bool buttonPressed = false;
 AsyncWebServer server(80);
 
