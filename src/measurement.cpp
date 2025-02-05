@@ -11,6 +11,13 @@ bool lastButtonState = HIGH;
 unsigned long lastDebounceTime = 0;
 MTi *MyMTi = NULL;
 
+void print()
+{
+    Serial.print("Messung " + String(recordCounter) + " : ");
+    Serial.println(isMeasuring ? "GESTARTET" : "GESTOPPT");
+    digitalWrite(LED_BUILTIN, isMeasuring);
+}
+
 void initMTi()
 {
     pinMode(3, INPUT);
@@ -39,6 +46,7 @@ void startMeasurement()
     {
         file.println(">>>> Aufnahme " + String(recordCounter) + " START <<<<");
         file.close();
+        print();
     }
     else
     {
@@ -48,17 +56,18 @@ void startMeasurement()
 
 void stopMeasurement()
 {
+    isMeasuring = false;
     File file = SD.open(currentFileName, FILE_APPEND);
     if (file)
     {
         file.println(">>>> Aufnahme " + String(recordCounter) + " STOPP <<<<");
         file.close();
+        print();
     }
     else
     {
         Serial.println("Fehler beim Öffnen der Datei (STOPP).");
     }
-    isMeasuring = false;
 }
 
 void logMeasurementData()
@@ -122,10 +131,6 @@ void handleButtonPress()
                 {
                     stopMeasurement();
                 }
-
-                Serial.print("Messung " + String(recordCounter) +  " : " );
-                Serial.println(isMeasuring ? "GESTARTET" : "GESTOPPT");
-                digitalWrite(LED_BUILTIN, isMeasuring);
             }
         }
     }

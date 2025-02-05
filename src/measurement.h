@@ -12,6 +12,7 @@ extern uint16_t fileCounter;
 extern String currentFileName;
 extern MTi *MyMTi;
 
+void print();
 void initMTi();
 void startMeasurement();
 void stopMeasurement();

@@ -1,5 +1,6 @@
 #include "websocket_handler.h"
 #include "index.h"
+#include "measurement.h"
 
 const char *ssid = "WLAN-Kornfeind";
 const char *password = "Vbk70Mfk75Kvh96Mfk00";
@@ -37,8 +38,17 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
         data[len] = 0;
         if (strcmp((char *)data, "toggle") == 0)
         {
-            ledState = !ledState;
-            ws.textAll(String(ledState));
+            isMeasuring = !isMeasuring; // Messstatus togglen
+
+            if (isMeasuring)
+            {
+                startMeasurement();
+            }
+            else
+            {
+                stopMeasurement();
+            }
+            ws.textAll(String(isMeasuring));
         }
     }
 }

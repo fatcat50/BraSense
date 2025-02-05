@@ -45,11 +45,11 @@ const char index_html[] PROGMEM = R"rawliteral(
 		};
 		websocket.onmessage = function(event) {
 		  if (event.data == "1") {
-			document.getElementById('state').innerHTML = "ON";
+			document.getElementById('state').innerHTML = "GESTARTET";
 			document.getElementById('toggle-btn').checked = true;
 		  }
 		  else {
-			document.getElementById('state').innerHTML = "OFF";
+			document.getElementById('state').innerHTML = "GESTOPPT";
 			document.getElementById('toggle-btn').checked = false;
 		  }
 		};
