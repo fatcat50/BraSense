@@ -29,7 +29,7 @@ const char index_html[] PROGMEM = R"rawliteral(
       <input id="toggle-btn" class="toggle" type="checkbox" %CHECK%>
       <label for="toggle-btn"></label>
     </div>
-    <p>On-board LED: <span id="state">%STATE%</span></p>
+    <p>Messung: <span id="state">%STATE%</span></p>
 
     <script>
 	  window.addEventListener('load', function() {

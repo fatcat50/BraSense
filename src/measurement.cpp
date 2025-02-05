@@ -1,4 +1,5 @@
 #include "measurement.h"
+#include "websocket_handler.h"
 
 #define BUTTON_PIN 2
 #define DEBOUNCE_DELAY 50
@@ -47,6 +48,7 @@ void startMeasurement()
         file.println(">>>> Aufnahme " + String(recordCounter) + " START <<<<");
         file.close();
         print();
+        ws.textAll(String(isMeasuring));
     }
     else
     {
@@ -63,6 +65,7 @@ void stopMeasurement()
         file.println(">>>> Aufnahme " + String(recordCounter) + " STOPP <<<<");
         file.close();
         print();
+        ws.textAll(String(isMeasuring));
     }
     else
     {
