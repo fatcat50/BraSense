@@ -41,19 +41,19 @@ const char index_html[] PROGMEM = R"rawliteral(
         websocket = new WebSocket(`ws://${window.location.hostname}/ws`);
 
         websocket.onopen = function(event) {
-            console.log('✅ WebSocket verbunden');
+            console.log('WebSocket verbunden');
         };
 
         websocket.onclose = function(event) {
-            console.log('❌ WebSocket getrennt');
+            console.log('WebSocket getrennt');
         };
 
         websocket.onerror = function(error) {
-            console.log('⚠️ WebSocket Fehler:', error);
+            console.log('WebSocket Fehler:', error);
         };
 
         websocket.onmessage = function(event) {
-            console.log("📡 WebSocket Nachricht:", event.data);
+            console.log("WebSocket Nachricht:", event.data);
 
             try {
                 let data = JSON.parse(event.data);
