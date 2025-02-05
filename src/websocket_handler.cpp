@@ -85,3 +85,13 @@ String processor(const String &var)
     }
     return String();
 }
+
+void sendSensorData()
+{
+    float x = MyMTi->getAcceleration()[0];
+    float y = MyMTi->getAcceleration()[1];
+    float z = MyMTi->getAcceleration()[2];
+
+    String json = "{\"x\": " + String(x, 2) + ", \"y\": " + String(y, 2) + ", \"z\": " + String(z, 2) + "}";
+    ws.textAll(json);
+}

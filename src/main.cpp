@@ -35,6 +35,7 @@ void loop()
         {
             measurementCounter++;
             logMeasurementData();
+            sendSensorData();
         }
     }
     ws.cleanupClients();
