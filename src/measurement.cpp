@@ -1,12 +1,20 @@
 #include "measurement.h"
 
+#define BUTTON_PIN 2
+#define DEBOUNCE_DELAY 50
+
 bool isMeasuring = false;
 uint16_t recordCounter = 0;
 uint32_t measurementCounter = 0;
+bool buttonState = HIGH;
+bool lastButtonState = HIGH;
+unsigned long lastDebounceTime = 0;
 MTi *MyMTi = NULL;
 
 void initMTi()
 {
+    pinMode(3, INPUT);
+
     MyMTi = new MTi(0x6B, 3);
     if (!MyMTi->detect(1000))
     {
@@ -31,33 +39,26 @@ void startMeasurement()
     {
         file.println(">>>> Aufnahme " + String(recordCounter) + " START <<<<");
         file.close();
-        Serial.println("Aufnahme " + String(recordCounter) + " gestartet.");
     }
     else
     {
         Serial.println("Fehler beim Oeffnen der Datei (START).");
     }
-    digitalWrite(LED_BUILTIN, HIGH);
 }
 
 void stopMeasurement()
 {
-    if (isMeasuring)
+    File file = SD.open(currentFileName, FILE_APPEND);
+    if (file)
     {
-        File file = SD.open(currentFileName, FILE_APPEND);
-        if (file)
-        {
-            file.println(">>>> Aufnahme " + String(recordCounter) + " STOPP <<<<");
-            file.close();
-            Serial.println("Aufnahme gestoppt.");
-        }
-        else
-        {
-            Serial.println("Fehler beim Öffnen der Datei (STOPP).");
-        }
-        isMeasuring = false;
+        file.println(">>>> Aufnahme " + String(recordCounter) + " STOPP <<<<");
+        file.close();
     }
-    digitalWrite(LED_BUILTIN, LOW);
+    else
+    {
+        Serial.println("Fehler beim Öffnen der Datei (STOPP).");
+    }
+    isMeasuring = false;
 }
 
 void logMeasurementData()
@@ -86,4 +87,47 @@ void logMeasurementData()
     {
         Serial.println("Fehler beim Öffnen der Datei (logData).");
     }
+}
+
+void initMeasurement()
+{
+    pinMode(BUTTON_PIN, INPUT_PULLUP);
+    pinMode(LED_BUILTIN, OUTPUT);
+    digitalWrite(LED_BUILTIN, LOW);
+}
+
+void handleButtonPress()
+{
+    int reading = digitalRead(BUTTON_PIN);
+
+    if (reading != lastButtonState)
+    {
+        lastDebounceTime = millis();
+    }
+
+    if ((millis() - lastDebounceTime) > DEBOUNCE_DELAY)
+    {
+        if (reading != buttonState)
+        {
+            buttonState = reading;
+            if (buttonState == LOW)
+            {
+                isMeasuring = !isMeasuring;
+
+                if (isMeasuring)
+                {
+                    startMeasurement();
+                }
+                else
+                {
+                    stopMeasurement();
+                }
+
+                Serial.print("Messung " + String(recordCounter) +  " : " );
+                Serial.println(isMeasuring ? "GESTARTET" : "GESTOPPT");
+                digitalWrite(LED_BUILTIN, isMeasuring);
+            }
+        }
+    }
+    lastButtonState = reading;
 }

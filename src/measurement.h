@@ -16,5 +16,7 @@ void initMTi();
 void startMeasurement();
 void stopMeasurement();
 void logMeasurementData();
+void initMeasurement();
+void handleButtonPress();
 
 #endif // MEASUREMENT_H
