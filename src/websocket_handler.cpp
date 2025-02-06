@@ -48,7 +48,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
             {
                 stopMeasurement();
             }
-            ws.textAll(String(isMeasuring));
+            //ws.textAll(String(isMeasuring));
         }
     }
 }

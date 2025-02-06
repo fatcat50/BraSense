@@ -161,15 +161,17 @@ const char index_html[] PROGMEM = R"rawliteral(
         },
       });
 
-      function updateChart(x, y, z) {
-        let timestamp = Date.now();
+      let startTime = Date.now() / 1000;
 
-        //if (chart.data.labels.length > 20) {
-        //  chart.data.labels.shift();
-        //  chart.data.datasets[0].data.shift();
-        //  chart.data.datasets[1].data.shift();
-        //  chart.data.datasets[2].data.shift();
-        //}
+      function updateChart(x, y, z) {
+        let timestamp = (Date.now() / 1000) - startTime; // Zeit in Sekunden seit Start
+
+        if (chart.data.labels.length > 100) {
+          chart.data.labels.shift();
+          chart.data.datasets[0].data.shift();
+          chart.data.datasets[1].data.shift();
+          chart.data.datasets[2].data.shift();
+        }
 
         chart.data.labels.push(timestamp);
         chart.data.datasets[0].data.push({ x: timestamp, y: x });

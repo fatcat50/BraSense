@@ -8,12 +8,16 @@
 #include "sd_handler.h"
 #include "measurement.h"
 
+unsigned long lastTime = 0;
+unsigned long interval = 10;
+
 void setup()
 {
     Serial.begin(115200);
 
     EEPROM.begin(128);
     Wire.begin();
+    Wire.setClock(400000UL);
     initMTi();
     initMeasurement();
     initSDCard();
@@ -33,11 +37,16 @@ void loop()
 
         if (!isnan(MyMTi->getAcceleration()[0]))
         {
-            measurementCounter++;
-            logMeasurementData();
-            sendSensorData();
+            if (millis() - lastTime >= interval)
+            {
+                measurementCounter++;
+                logMeasurementData();
+                sendSensorData();
+
+                lastTime = millis();
+            }
         }
     }
     ws.cleanupClients();
-    //delay(10);
+    // delay(10);
 }

@@ -1,5 +1,6 @@
 #include "measurement.h"
 #include "websocket_handler.h"
+#include "sd_handler.h"
 
 #define BUTTON_PIN 2
 #define DEBOUNCE_DELAY 50
@@ -41,36 +42,20 @@ void startMeasurement()
     isMeasuring = true;
     recordCounter++;
 
-    // Ins File schreiben, dass eine neue Aufnahme gestartet wurde
-    File file = SD.open(currentFileName, FILE_APPEND);
-    if (file)
-    {
-        file.println(">>>> Aufnahme " + String(recordCounter) + " START <<<<");
-        file.close();
-        print();
-        ws.textAll(String(isMeasuring));
-    }
-    else
-    {
-        Serial.println("Fehler beim Oeffnen der Datei (START).");
-    }
+    openFile();
+    file.println(">>>> Aufnahme " + String(recordCounter) + " START <<<<");
+    print();
+    ws.textAll(String(isMeasuring));
 }
 
 void stopMeasurement()
 {
     isMeasuring = false;
-    File file = SD.open(currentFileName, FILE_APPEND);
-    if (file)
-    {
-        file.println(">>>> Aufnahme " + String(recordCounter) + " STOPP <<<<");
-        file.close();
-        print();
-        ws.textAll(String(isMeasuring));
-    }
-    else
-    {
-        Serial.println("Fehler beim Öffnen der Datei (STOPP).");
-    }
+
+    file.println(">>>> Aufnahme " + String(recordCounter) + " STOPP <<<<");
+    file.close();
+    print();
+    ws.textAll(String(isMeasuring));
 }
 
 void logMeasurementData()
@@ -78,27 +63,18 @@ void logMeasurementData()
     char cnt[32];
     dtostrf(measurementCounter, 8, 2, cnt);
 
-    File file = SD.open(currentFileName, FILE_APPEND);
-    if (file)
-    {
-        file.print(cnt);
-        file.print(" ; Acceleration [m/s^2]: ");
+    file.print(cnt);
+    file.print(" ; Acceleration [m/s^2]: ");
 
-        for (int i = 0; i < 3; ++i)
-        {
-            char str[32];
-            dtostrf(MyMTi->getAcceleration()[i], 8, 2, str);
-            file.print(str);
-            if (i < 2)
-                file.print(" ");
-        }
-        file.println();
-        file.close();
-    }
-    else
+    for (int i = 0; i < 3; ++i)
     {
-        Serial.println("Fehler beim Öffnen der Datei (logData).");
+        char str[32];
+        dtostrf(MyMTi->getAcceleration()[i], 8, 2, str);
+        file.print(str);
+        if (i < 2)
+            file.print(" ");
     }
+    file.println();
 }
 
 void initMeasurement()

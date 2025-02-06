@@ -7,11 +7,13 @@
 
 extern uint16_t fileCounter;
 extern String currentFileName;
+extern File file;
 
 bool initSDCard();
 void loadFileCounter();
 void saveFileCounter();
 void createNewMeasurementFile();
-void appendFile(fs::FS &fs, const char *path, const char *message);
+void openFile();
+void closeFile();
 
 #endif // SD_HANDLER_H
