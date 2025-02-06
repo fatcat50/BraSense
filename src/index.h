@@ -166,7 +166,7 @@ const char index_html[] PROGMEM = R"rawliteral(
       function updateChart(x, y, z) {
         let timestamp = (Date.now() / 1000) - startTime; // Zeit in Sekunden seit Start
 
-        if (chart.data.labels.length > 100) {
+        if (chart.data.labels.length > 500) {
           chart.data.labels.shift();
           chart.data.datasets[0].data.shift();
           chart.data.datasets[1].data.shift();
