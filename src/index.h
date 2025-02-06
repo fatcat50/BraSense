@@ -32,6 +32,7 @@ const char index_html[] = R"rawliteral(
     <p>On-board LED: <span id="state">%STATE%</span></p>
 
     <script>
+<<<<<<< Updated upstream
 	  window.addEventListener('load', function() {
 		var websocket = new WebSocket(`ws://${window.location.hostname}/ws`);
 		websocket.onopen = function(event) {
@@ -57,6 +58,93 @@ const char index_html[] = R"rawliteral(
 		document.getElementById('toggle-btn').addEventListener('change', function() { websocket.send('toggle'); });
 	  });
 	</script>
+=======
+      var websocket;
+
+      window.addEventListener("load", function () {
+        websocket = new WebSocket(`ws://${window.location.hostname}/ws`);
+
+        websocket.onopen = function (event) {
+          console.log("WebSocket verbunden");
+        };
+
+        websocket.onclose = function (event) {
+          console.log("WebSocket getrennt");
+        };
+
+        websocket.onerror = function (error) {
+          console.log("WebSocket Fehler:", error);
+        };
+
+        websocket.onmessage = function (event) {
+          console.log("WebSocket Nachricht:", event.data);
+
+          try {
+            let data = JSON.parse(event.data);
+
+            if (
+              data.hasOwnProperty("x") &&
+              data.hasOwnProperty("y") &&
+              data.hasOwnProperty("z")
+            ) {
+              updateChart(data.x, data.y, data.z);
+            } else if (event.data == "1") {
+              document.getElementById("state").innerHTML = "GESTARTET";
+              document.getElementById("toggle-btn").checked = true;
+            } else if (event.data == "0") {
+              document.getElementById("state").innerHTML = "GESTOPPT";
+              document.getElementById("toggle-btn").checked = false;
+            }
+          } catch (e) {
+            console.log("Fehler beim Verarbeiten der WebSocket-Daten:", e);
+          }
+        };
+
+        document
+          .getElementById("toggle-btn")
+          .addEventListener("change", function () {
+            websocket.send("toggle");
+          });
+      });
+
+      let ctx = document.getElementById("chart").getContext("2d");
+      let chart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: [],
+          datasets: [
+            { label: "X-Achse", borderColor: "red", data: [], fill: false },
+            { label: "Y-Achse", borderColor: "green", data: [], fill: false },
+            { label: "Z-Achse", borderColor: "blue", data: [], fill: false },
+          ],
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { type: "linear", position: "bottom" },
+            y: { beginAtZero: false },
+          },
+        },
+      });
+
+      function updateChart(x, y, z) {
+        let timestamp = Date.now();
+
+        //if (chart.data.labels.length > 100) {
+        //  chart.data.labels.shift();
+        //  chart.data.datasets[0].data.shift();
+        //  chart.data.datasets[1].data.shift();
+        //  chart.data.datasets[2].data.shift();
+        //}
+
+        chart.data.labels.push(timestamp);
+        chart.data.datasets[0].data.push({ x: timestamp, y: x });
+        chart.data.datasets[1].data.push({ x: timestamp, y: y });
+        chart.data.datasets[2].data.push({ x: timestamp, y: z });
+        chart.update('none');
+      }
+    </script>
+>>>>>>> Stashed changes
   </body>
 </html>
 )rawliteral";
