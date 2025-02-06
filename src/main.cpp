@@ -39,5 +39,5 @@ void loop()
         }
     }
     ws.cleanupClients();
-    delay(10);
+    //delay(10);
 }
