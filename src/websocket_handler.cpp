@@ -8,7 +8,6 @@ const char *password = "Vbk70Mfk75Kvh96Mfk00";
 //const char* ssid     = "ESP32";
 //const char* password = "12345678";
 
-bool ledState = 0;
 AsyncWebSocket ws("/ws");
 AsyncWebServer server(80);
 
@@ -47,7 +46,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
         data[len] = 0;
         if (strcmp((char *)data, "toggle") == 0)
         {
-            isMeasuring = !isMeasuring; // Messstatus togglen
+            isMeasuring = !isMeasuring; 
 
             if (isMeasuring)
             {
@@ -57,7 +56,6 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
             {
                 stopMeasurement();
             }
-            //ws.textAll(String(isMeasuring));
         }
     }
 }
@@ -74,7 +72,6 @@ void eventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEvent
         break;
     case WS_EVT_DATA:
         handleWebSocketMessage(arg, data, len);
-        digitalWrite(LED_BUILTIN, ledState);
         break;
     case WS_EVT_PONG:
     case WS_EVT_ERROR:
@@ -86,11 +83,11 @@ String processor(const String &var)
 {
     if (var == "STATE")
     {
-        return ledState ? "ON" : "OFF";
+        return isMeasuring ? "GESTARTET" : "GESTOPPT";
     }
     if (var == "CHECK")
     {
-        return ledState ? "checked" : "";
+        return isMeasuring ? "checked" : "";
     }
     return String();
 }

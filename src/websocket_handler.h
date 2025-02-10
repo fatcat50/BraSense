@@ -4,7 +4,6 @@
 #include <Arduino.h>
 #include <ESPAsyncWebServer.h>
 
-extern bool ledState;
 extern AsyncWebSocket ws;
 
 void initWiFi();
