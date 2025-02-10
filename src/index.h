@@ -87,7 +87,7 @@ const char index_html[] PROGMEM = R"rawliteral(
       <input id="toggle-btn" class="toggle" type="checkbox" %CHECK% />
       <label for="toggle-btn"></label>
     </div>
-    <p>Messung: <span id="state">%STATE%</span></p>
+    <p>State: <span id="state">%STATE%</span></p>
 
     <canvas id="chart"></canvas>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -123,10 +123,10 @@ const char index_html[] PROGMEM = R"rawliteral(
             ) {
               updateChart(data.x, data.y, data.z);
             } else if (event.data == "1") {
-              document.getElementById("state").innerHTML = "GESTARTET";
+              document.getElementById("state").innerHTML = "Measuring...";
               document.getElementById("toggle-btn").checked = true;
             } else if (event.data == "0") {
-              document.getElementById("state").innerHTML = "GESTOPPT";
+              document.getElementById("state").innerHTML = "Standby";
               document.getElementById("toggle-btn").checked = false;
             }
           } catch (e) {

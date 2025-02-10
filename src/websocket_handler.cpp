@@ -83,7 +83,7 @@ String processor(const String &var)
 {
     if (var == "STATE")
     {
-        return isMeasuring ? "GESTARTET" : "GESTOPPT";
+        return isMeasuring ? "Measuring..." : "Standby";
     }
     if (var == "CHECK")
     {
