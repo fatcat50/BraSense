@@ -89,7 +89,7 @@ const char index_html[] PROGMEM = R"rawliteral(
     </div>
     <p>State: <span id="state">%STATE%</span></p>
     <div id="charts-container"></div>
-  
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script>
@@ -120,7 +120,11 @@ const char index_html[] PROGMEM = R"rawliteral(
           try {
             let data = JSON.parse(event.data);
 
-            if (data.hasOwnProperty("x") && data.hasOwnProperty("y") && data.hasOwnProperty("z")) {
+            if (
+              data.hasOwnProperty("x") &&
+              data.hasOwnProperty("y") &&
+              data.hasOwnProperty("z")
+            ) {
               if (isMeasuring) {
                 updateCurrentChart(data.x, data.y, data.z);
               }
@@ -138,14 +142,16 @@ const char index_html[] PROGMEM = R"rawliteral(
           }
         };
 
-        document.getElementById("toggle-btn").addEventListener("change", function () {
-          websocket.send("toggle");
-        });
+        document
+          .getElementById("toggle-btn")
+          .addEventListener("change", function () {
+            websocket.send("toggle");
+          });
       });
 
       function startMeasurement() {
         isMeasuring = true;
-        startTime = Date.now() / 1000; 
+        startTime = Date.now() / 1000;
         createNewChart();
       }
 
@@ -157,27 +163,29 @@ const char index_html[] PROGMEM = R"rawliteral(
         chartCounter++;
 
         // Neues Div-Element für die Messung
-    let chartContainer = document.createElement("div");
-    chartContainer.style.textAlign = "center";
-    chartContainer.style.marginBottom = "40px";
+        let chartContainer = document.createElement("div");
+        chartContainer.style.textAlign = "center";
+        chartContainer.style.marginBottom = "40px";
 
-    // Überschrift für das Diagramm
-    let chartTitle = document.createElement("h3");
-    chartTitle.innerText = "Measurement #" + chartCounter;
-    chartTitle.style.marginBottom = "5px";
+        // Überschrift für das Diagramm
+        let chartTitle = document.createElement("h3");
+        chartTitle.innerText = "Measurement #" + chartCounter;
+        chartTitle.style.marginBottom = "5px";
 
-    // Canvas für das Diagramm
-    let canvas = document.createElement("canvas");
-    canvas.id = "chart" + chartCounter;
-    canvas.style.marginTop = "10px";
-    
+        // Canvas für das Diagramm
+        let canvas = document.createElement("canvas");
+        canvas.id = "chart" + chartCounter;
+        canvas.style.marginTop = "10px";
 
-    // Elemente in den Container hinzufügen
-    chartContainer.appendChild(chartTitle);
-    chartContainer.appendChild(canvas);
+        // Elemente in den Container hinzufügen
+        chartContainer.appendChild(chartTitle);
+        chartContainer.appendChild(canvas);
 
-        
-        document.getElementById("charts-container").appendChild(chartContainer);
+        let chartsContainer = document.getElementById("charts-container");
+        chartsContainer.insertBefore(
+          chartContainer,
+          chartsContainer.firstChild
+        );
 
         let ctx = canvas.getContext("2d");
         let newChart = new Chart(ctx, {
@@ -187,16 +195,16 @@ const char index_html[] PROGMEM = R"rawliteral(
             datasets: [
               { label: "X-Axis", borderColor: "red", data: [], fill: false },
               { label: "Y-Axis", borderColor: "green", data: [], fill: false },
-              { label: "Z-Axis", borderColor: "blue", data: [], fill: false }
-            ]
+              { label: "Z-Axis", borderColor: "blue", data: [], fill: false },
+            ],
           },
           options: {
             responsive: true,
             scales: {
               x: { type: "linear", position: "bottom" },
-              y: { beginAtZero: false }
-            }
-          }
+              y: { beginAtZero: false },
+            },
+          },
         });
 
         charts.push(newChart);
@@ -206,7 +214,7 @@ const char index_html[] PROGMEM = R"rawliteral(
         if (charts.length === 0 || !isMeasuring) return; // Falls keine Messung läuft, nichts tun
 
         let currentChart = charts[charts.length - 1];
-        let timestamp = (Date.now() / 1000) - startTime;
+        let timestamp = Date.now() / 1000 - startTime;
 
         /*if (currentChart.data.labels.length > 500) {
           currentChart.data.labels.shift();
@@ -219,7 +227,7 @@ const char index_html[] PROGMEM = R"rawliteral(
         currentChart.data.datasets[0].data.push({ x: timestamp, y: x });
         currentChart.data.datasets[1].data.push({ x: timestamp, y: y });
         currentChart.data.datasets[2].data.push({ x: timestamp, y: z });
-        currentChart.update('none');
+        currentChart.update("none");
       }
     </script>
   </body>
