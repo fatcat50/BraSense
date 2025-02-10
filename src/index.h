@@ -18,11 +18,10 @@ const char index_html[] PROGMEM = R"rawliteral(
         text-align: center;
       }
       body {
-        margin-top: 50px;
+        margin-top: 20px;
       }
       h1 {
-        color: #444444;
-        margin: 50px auto;
+        display: none;
       }
       p {
         font-size: 19px;
@@ -33,7 +32,7 @@ const char index_html[] PROGMEM = R"rawliteral(
         color: #444;
       }
       .switch {
-        margin: 25px auto;
+        margin: 10px auto;
         width: 80px;
       }
       .toggle {
@@ -82,12 +81,13 @@ const char index_html[] PROGMEM = R"rawliteral(
     </style>
   </head>
   <body>
-    <h1>ESP32 WebSocket Server</h1>
+    <p id="state" style="font-weight: bold; margin-bottom: 5px;">State: <span>%STATE%</span></p>
+    
     <div class="switch">
       <input id="toggle-btn" class="toggle" type="checkbox" %CHECK% />
       <label for="toggle-btn"></label>
     </div>
-    <p>State: <span id="state">%STATE%</span></p>
+
     <div id="charts-container"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -129,11 +129,11 @@ const char index_html[] PROGMEM = R"rawliteral(
                 updateCurrentChart(data.x, data.y, data.z);
               }
             } else if (event.data == "1") {
-              document.getElementById("state").innerHTML = "Measuring...";
+              document.getElementById("state").innerHTML = "State: Measuring...";
               document.getElementById("toggle-btn").checked = true;
               startMeasurement();
             } else if (event.data == "0") {
-              document.getElementById("state").innerHTML = "Standby";
+              document.getElementById("state").innerHTML = "State: Standby";
               document.getElementById("toggle-btn").checked = false;
               stopMeasurement();
             }
