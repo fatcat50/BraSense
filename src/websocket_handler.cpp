@@ -5,13 +5,22 @@
 const char *ssid = "WLAN-Kornfeind";
 const char *password = "Vbk70Mfk75Kvh96Mfk00";
 
+//const char* ssid     = "ESP32";
+//const char* password = "12345678";
+
 bool ledState = 0;
 AsyncWebSocket ws("/ws");
 AsyncWebServer server(80);
 
 void initWiFi()
 {
+    /*WiFi.mode(WIFI_AP);
+    WiFi.softAP(ssid, password);
+    Serial.println(WiFi.softAPIP());
+    */
+    
     WiFi.begin(ssid, password);
+
     Serial.print("Connecting to WiFi ..");
     while (WiFi.status() != WL_CONNECTED)
     {
