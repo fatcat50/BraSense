@@ -3,6 +3,7 @@
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <Wire.h>
+#include "time.h"
 #include "index.h"
 #include "websocket_handler.h"
 #include "sd_handler.h"
@@ -18,12 +19,13 @@ void setup()
     EEPROM.begin(128);
     Wire.begin();
     Wire.setClock(400000UL);
+    initWiFi();
+    initTime();
     initMTi();
     initMeasurement();
     initSDCard();
     loadFileCounter();
     createNewMeasurementFile();
-    initWiFi();
     setupWebSocket();
 }
 
