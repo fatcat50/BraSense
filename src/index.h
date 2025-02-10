@@ -81,8 +81,10 @@ const char index_html[] PROGMEM = R"rawliteral(
     </style>
   </head>
   <body>
-    <p id="state" style="font-weight: bold; margin-bottom: 5px;">State: <span>%STATE%</span></p>
-    
+    <p id="state" style="font-weight: bold; margin-bottom: 5px">
+      State: <span>%STATE%</span>
+    </p>
+
     <div class="switch">
       <input id="toggle-btn" class="toggle" type="checkbox" %CHECK% />
       <label for="toggle-btn"></label>
@@ -129,7 +131,8 @@ const char index_html[] PROGMEM = R"rawliteral(
                 updateCurrentChart(data.x, data.y, data.z);
               }
             } else if (event.data == "1") {
-              document.getElementById("state").innerHTML = "State: Measuring...";
+              document.getElementById("state").innerHTML =
+                "State: Measuring...";
               document.getElementById("toggle-btn").checked = true;
               startMeasurement();
             } else if (event.data == "0") {
