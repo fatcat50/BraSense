@@ -1,19 +1,19 @@
-#include "Arduino.h"
-#include <WiFi.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
+#include <WiFi.h>
 #include <Wire.h>
-#include "time.h"
+
+#include "Arduino.h"
 #include "index.h"
-#include "websocket_handler.h"
-#include "sd_handler.h"
 #include "measurement.h"
+#include "sd_handler.h"
+#include "time.h"
+#include "websocket_handler.h"
 
 unsigned long lastTime = 0;
 unsigned long interval = 10;
 
-void setup()
-{
+void setup() {
     Serial.begin(115200);
 
     EEPROM.begin(128);
@@ -29,18 +29,14 @@ void setup()
     setupWebSocket();
 }
 
-void loop()
-{
+void loop() {
     handleButtonPress();
 
-    if (isMeasuring && digitalRead(MyMTi->drdy))
-    {
+    if (isMeasuring && digitalRead(MyMTi->drdy)) {
         MyMTi->readMessages();
 
-        if (!isnan(MyMTi->getAcceleration()[0]))
-        {
-            if (millis() - lastTime >= interval)
-            {
+        if (!isnan(MyMTi->getAcceleration()[0])) {
+            if (millis() - lastTime >= interval) {
                 measurementCounter++;
                 logMeasurementData();
                 sendSensorData();

@@ -2,6 +2,7 @@
 #define MEASUREMENT_H
 
 #include <Arduino.h>
+
 #include "MTi.h"
 #include "SD.h"
 
@@ -20,4 +21,4 @@ void logMeasurementData();
 void initMeasurement();
 void handleButtonPress();
 
-#endif // MEASUREMENT_H
+#endif  // MEASUREMENT_H
