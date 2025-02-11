@@ -71,7 +71,7 @@ void printLocalTime(){
 void initTime()
 {
     configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-    printLocalTime();
+    //printLocalTime();
 }
 
 void setupWebSocket()
