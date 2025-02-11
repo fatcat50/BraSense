@@ -37,7 +37,6 @@ void loop() {
 
         if (!isnan(MyMTi->getAcceleration()[0])) {
             if (millis() - lastTime >= interval) {
-                measurementCounter++;
                 logMeasurementData();
                 sendSensorData();
 

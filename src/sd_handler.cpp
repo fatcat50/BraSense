@@ -32,12 +32,12 @@ void createNewMeasurementFile() {
         Serial.println(
             "Fehler beim Abrufen der Zeit! Verwende Standard-Dateinamen.");
         char filename[32];
-        sprintf(filename, "/messung_%04u.txt",
+        sprintf(filename, "/messung_%04u.csv",
                 fileCounter);  // Fallback, falls Zeit nicht verfügbar
         currentFileName = String(filename);
     } else {
         char filename[32];
-        sprintf(filename, "/%02d.%02d.%04d_%02d-%02d-%02d.txt",
+        sprintf(filename, "/%02d.%02d.%04d_%02d-%02d-%02d.csv",
                 timeinfo.tm_mday, timeinfo.tm_mon + 1, timeinfo.tm_year + 1900,
                 timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
         currentFileName = String(filename);

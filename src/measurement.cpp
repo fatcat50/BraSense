@@ -9,14 +9,15 @@
 bool isMeasuring = false;
 uint16_t recordCounter = 0;
 uint32_t measurementCounter = 0;
+unsigned long measurementStartTime = 0;
 bool buttonState = HIGH;
 bool lastButtonState = HIGH;
 unsigned long lastDebounceTime = 0;
 MTi *MyMTi = NULL;
 
 void print() {
-    Serial.print("Messung " + String(recordCounter) + " : ");
-    Serial.println(isMeasuring ? "GESTARTET" : "GESTOPPT");
+    Serial.print("Measurement " + String(recordCounter) + " : ");
+    Serial.println(isMeasuring ? "STARTED" : "STOPPED");
     digitalWrite(LED_BUILTIN, isMeasuring);
 }
 
@@ -25,7 +26,7 @@ void initMTi() {
 
     MyMTi = new MTi(0x6B, 3);
     if (!MyMTi->detect(1000)) {
-        Serial.println("MTi nicht erkannt. Überprüfen Sie die Verbindungen.");
+        Serial.println("MTi not detected. Check connections.");
         while (1);
     }
     MyMTi->goToConfig();
@@ -37,9 +38,12 @@ void initMTi() {
 void startMeasurement() {
     isMeasuring = true;
     recordCounter++;
+    measurementCounter = 0;
+    measurementStartTime = millis();
 
     openFile();
-    file.println(">>>> Aufnahme " + String(recordCounter) + " START <<<<");
+    file.println(">>>> Measurement #" + String(recordCounter) + " START <<<<");
+    file.println("Time [s];Data Point;X [m/s^2];Y [m/s^2];Z [m/s^2]");
     print();
     ws.textAll(String(isMeasuring));
 }
@@ -47,24 +51,31 @@ void startMeasurement() {
 void stopMeasurement() {
     isMeasuring = false;
 
-    file.println(">>>> Aufnahme " + String(recordCounter) + " STOPP <<<<");
+    file.println(">>>> Measurement #" + String(recordCounter) + " STOP <<<<");
     file.close();
     print();
     ws.textAll(String(isMeasuring));
 }
 
 void logMeasurementData() {
+    float timestamp = (millis() - measurementStartTime) / 1000.0;
+    char timeStr[10];
+    measurementCounter++;
+    dtostrf(timestamp, 6, 2, timeStr);
+    file.print(timeStr);
+    file.print(";");
+
     char cnt[32];
     dtostrf(measurementCounter, 8, 2, cnt);
 
     file.print(cnt);
-    file.print(" ; Acceleration [m/s^2]: ");
+    file.print(";");
 
     for (int i = 0; i < 3; ++i) {
         char str[32];
         dtostrf(MyMTi->getAcceleration()[i], 8, 2, str);
         file.print(str);
-        if (i < 2) file.print(" ");
+        if (i < 2) file.print(";");
     }
     file.println();
 }
