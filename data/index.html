@@ -1,3 +1,4 @@
+#ifndef INDEX_H #define INDEX_H const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html>
   <head>
@@ -74,6 +75,29 @@
       .toggle:checked + label:after {
         margin-left: 42px;
       }
+      .top-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        width: 100%;
+      }
+
+      #download-btn {
+        padding: 8px 12px;
+        font-size: 14px;
+        background-color: #008cba;
+        color: white;
+        border: none;
+        cursor: pointer;
+        border-radius: 5px;
+        transition: 0.3s;
+      }
+
+      #download-btn:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+      }
     </style>
   </head>
   <body>
@@ -81,9 +105,12 @@
       State: <span>%STATE%</span>
     </p>
 
-    <div class="switch">
-      <input id="toggle-btn" class="toggle" type="checkbox" %CHECK% />
-      <label for="toggle-btn"></label>
+    <div class="top-bar">
+      <div class="switch">
+        <input id="toggle-btn" class="toggle" type="checkbox" %CHECK% />
+        <label for="toggle-btn"></label>
+      </div>
+      <button id="download-btn" disabled>Download</button>
     </div>
 
     <div id="charts-container"></div>
@@ -146,16 +173,34 @@
           .addEventListener("change", function () {
             websocket.send("toggle");
           });
+        document
+          .getElementById("download-btn")
+          .addEventListener("click", function () {
+            if (!this.disabled) {
+              websocket.send("download_log");
+            }
+          });
       });
+
+      function updateDownloadButtonState() {
+        const downloadButton = document.getElementById("download-btn");
+        if (!isMeasuring && charts.length > 0) {
+          downloadButton.disabled = false;
+        } else {
+          downloadButton.disabled = true;
+        }
+      }
 
       function startMeasurement() {
         isMeasuring = true;
         startTime = Date.now() / 1000;
         createNewChart();
+        updateDownloadButtonState(); // Disable download while measuring
       }
 
       function stopMeasurement() {
         isMeasuring = false;
+        updateDownloadButtonState(); // Enable download after stopping
       }
 
       function createNewChart() {
@@ -231,3 +276,4 @@
     </script>
   </body>
 </html>
+)rawliteral"; #endif // INDEX_H

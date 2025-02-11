@@ -92,7 +92,7 @@ const char index_html[] PROGMEM = R"rawliteral(
 
     <div id="charts-container"></div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js/dist/chart.umd.min.js"></script>
 
     <script>
       var websocket;
@@ -219,12 +219,12 @@ const char index_html[] PROGMEM = R"rawliteral(
         let currentChart = charts[charts.length - 1];
         let timestamp = Date.now() / 1000 - startTime;
 
-        /*if (currentChart.data.labels.length > 500) {
+        if (currentChart.data.labels.length > 300) {
           currentChart.data.labels.shift();
           currentChart.data.datasets[0].data.shift();
           currentChart.data.datasets[1].data.shift();
           currentChart.data.datasets[2].data.shift();
-        }*/
+        }
 
         currentChart.data.labels.push(timestamp);
         currentChart.data.datasets[0].data.push({ x: timestamp, y: x });
