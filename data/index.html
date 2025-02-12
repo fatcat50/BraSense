@@ -1,4 +1,3 @@
-#ifndef INDEX_H #define INDEX_H const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html>
   <head>
@@ -75,29 +74,6 @@
       .toggle:checked + label:after {
         margin-left: 42px;
       }
-      .top-bar {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 10px;
-        width: 100%;
-      }
-
-      #download-btn {
-        padding: 8px 12px;
-        font-size: 14px;
-        background-color: #008cba;
-        color: white;
-        border: none;
-        cursor: pointer;
-        border-radius: 5px;
-        transition: 0.3s;
-      }
-
-      #download-btn:disabled {
-        background-color: #ccc;
-        cursor: not-allowed;
-      }
     </style>
   </head>
   <body>
@@ -105,17 +81,16 @@
       State: <span>%STATE%</span>
     </p>
 
-    <div class="top-bar">
-      <div class="switch">
-        <input id="toggle-btn" class="toggle" type="checkbox" %CHECK% />
-        <label for="toggle-btn"></label>
-      </div>
-      <button id="download-btn" disabled>Download</button>
+    <div class="switch">
+      <input id="toggle-btn" class="toggle" type="checkbox" %CHECK% />
+      <label for="toggle-btn"></label>
     </div>
+
+    <button onclick="downloadFile()">Download Log</button>
 
     <div id="charts-container"></div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js/dist/chart.umd.min.js"></script>
 
     <script>
       var websocket;
@@ -157,10 +132,14 @@
               document.getElementById("state").innerHTML =
                 "State: Measuring...";
               document.getElementById("toggle-btn").checked = true;
+              document.querySelector("button").disabled = true;
+
               startMeasurement();
             } else if (event.data == "0") {
               document.getElementById("state").innerHTML = "State: Standby";
               document.getElementById("toggle-btn").checked = false;
+              document.querySelector("button").disabled = false;
+
               stopMeasurement();
             }
           } catch (e) {
@@ -173,34 +152,52 @@
           .addEventListener("change", function () {
             websocket.send("toggle");
           });
-        document
-          .getElementById("download-btn")
-          .addEventListener("click", function () {
-            if (!this.disabled) {
-              websocket.send("download_log");
-            }
-          });
       });
 
-      function updateDownloadButtonState() {
-        const downloadButton = document.getElementById("download-btn");
-        if (!isMeasuring && charts.length > 0) {
-          downloadButton.disabled = false;
-        } else {
-          downloadButton.disabled = true;
-        }
+      function downloadFile() {
+        // Fetch (GET) auf deinen ESP-Endpunkt
+        fetch("/downloadLog")
+          .then((response) => {
+            if (!response.ok) {
+              // Server hat 404 oder 403 etc. geliefert
+              throw new Error(
+                "Network response was not OK: " + response.status
+              );
+            }
+            // Wir nehmen an, die Datei ist Text oder Binär -> BLOB
+            return response.blob();
+          })
+          .then((blob) => {
+            // Aus dem BLOB einen temporären URL erstellen
+            const objectURL = URL.createObjectURL(blob);
+
+            // Künstlich ein unsichtbares <a>-Element erzeugen
+            const link = document.createElement("a");
+            link.href = objectURL;
+            link.download = "currentLog.csv";
+            // << Name, den du speichern möchtest
+
+            // Link ins Dokument hängen, anklicken -> Download-Dialog
+            document.body.appendChild(link);
+            link.click();
+
+            // Aufräumen
+            document.body.removeChild(link);
+            URL.revokeObjectURL(objectURL);
+          })
+          .catch((err) => {
+            console.error("Download error:", err);
+          });
       }
 
       function startMeasurement() {
         isMeasuring = true;
         startTime = Date.now() / 1000;
         createNewChart();
-        updateDownloadButtonState(); // Disable download while measuring
       }
 
       function stopMeasurement() {
         isMeasuring = false;
-        updateDownloadButtonState(); // Enable download after stopping
       }
 
       function createNewChart() {
@@ -260,12 +257,12 @@
         let currentChart = charts[charts.length - 1];
         let timestamp = Date.now() / 1000 - startTime;
 
-        /*if (currentChart.data.labels.length > 500) {
+        if (currentChart.data.labels.length > 300) {
           currentChart.data.labels.shift();
           currentChart.data.datasets[0].data.shift();
           currentChart.data.datasets[1].data.shift();
           currentChart.data.datasets[2].data.shift();
-        }*/
+        }
 
         currentChart.data.labels.push(timestamp);
         currentChart.data.datasets[0].data.push({ x: timestamp, y: x });
@@ -276,4 +273,3 @@
     </script>
   </body>
 </html>
-)rawliteral"; #endif // INDEX_H
