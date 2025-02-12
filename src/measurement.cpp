@@ -78,6 +78,13 @@ void logMeasurementData() {
         if (i < 2) file.print(";");
     }
     file.println();
+
+    static const uint32_t FLUSH_INTERVAL = 100; // z.B. alle 100 Messwerte
+    if (measurementCounter % FLUSH_INTERVAL == 0) {
+        file.flush();  // SD-Puffer leeren
+        //Serial.println("FLUSHED");
+        delay(1);      // Watchdog-Reset ermöglichen
+    }
 }
 
 void initMeasurement() {
