@@ -45,5 +45,4 @@ void loop() {
         }
     }
     ws.cleanupClients();
-    // delay(10);
 }

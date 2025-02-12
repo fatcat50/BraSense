@@ -75,8 +75,35 @@ void initTime() {
 void setupWebSocket() {
     ws.onEvent(eventHandler);
     server.addHandler(&ws);
+
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
         request->send_P(200, "text/html", index_html, processor);
+    });
+
+    server.on("/downloadLog", HTTP_GET, [](AsyncWebServerRequest *request) {
+        Serial.println("==> Entered /downloadLog route <==");
+
+        if (isMeasuring) {
+            Serial.println("   isMeasuring == true => 403");
+            request->send(403, "text/plain",
+                          "Measurement still running. Please stop first.");
+            return;
+        }
+
+        // Serial.println("   Checking if file exists...");
+        // Serial.println("   currentFileName = " + currentFileName);
+
+        if (!SD.exists(currentFileName)) {
+            Serial.println("   File does not exist => 404");
+            request->send(404, "text/plain", "Log file not found.");
+            return;
+        }
+
+        // Serial.println("   File found, streaming...");
+        AsyncWebServerResponse *response =
+            request->beginResponse(SD, currentFileName, "text/csv");
+        request->send(response);
+        // Serial.println("   response->send() called.");
     });
     server.begin();
 }

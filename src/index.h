@@ -90,6 +90,8 @@ const char index_html[] PROGMEM = R"rawliteral(
       <label for="toggle-btn"></label>
     </div>
 
+    <button onclick="downloadFile()">Download Log</button>
+
     <div id="charts-container"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js/dist/chart.umd.min.js"></script>
@@ -134,10 +136,14 @@ const char index_html[] PROGMEM = R"rawliteral(
               document.getElementById("state").innerHTML =
                 "State: Measuring...";
               document.getElementById("toggle-btn").checked = true;
+              document.querySelector("button").disabled = true;
+
               startMeasurement();
             } else if (event.data == "0") {
               document.getElementById("state").innerHTML = "State: Standby";
               document.getElementById("toggle-btn").checked = false;
+              document.querySelector("button").disabled = false;
+
               stopMeasurement();
             }
           } catch (e) {
@@ -152,6 +158,34 @@ const char index_html[] PROGMEM = R"rawliteral(
           });
       });
 
+      function downloadFile() {
+        fetch("/downloadLog")
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(
+                "Network response was not OK: " + response.status
+              );
+            }
+            return response.blob();
+          })
+          .then((blob) => {
+            const objectURL = URL.createObjectURL(blob);
+
+            const link = document.createElement("a");
+            link.href = objectURL;
+            link.download = "currentLog.csv";
+
+            document.body.appendChild(link);
+            link.click();
+
+            document.body.removeChild(link);
+            URL.revokeObjectURL(objectURL);
+          })
+          .catch((err) => {
+            console.error("Download error:", err);
+          });
+      }
+
       function startMeasurement() {
         isMeasuring = true;
         startTime = Date.now() / 1000;
@@ -165,22 +199,18 @@ const char index_html[] PROGMEM = R"rawliteral(
       function createNewChart() {
         chartCounter++;
 
-        // Neues Div-Element für die Messung
         let chartContainer = document.createElement("div");
         chartContainer.style.textAlign = "center";
         chartContainer.style.marginBottom = "40px";
 
-        // Überschrift für das Diagramm
         let chartTitle = document.createElement("h3");
         chartTitle.innerText = "Measurement #" + chartCounter;
         chartTitle.style.marginBottom = "5px";
 
-        // Canvas für das Diagramm
         let canvas = document.createElement("canvas");
         canvas.id = "chart" + chartCounter;
         canvas.style.marginTop = "10px";
 
-        // Elemente in den Container hinzufügen
         chartContainer.appendChild(chartTitle);
         chartContainer.appendChild(canvas);
 
