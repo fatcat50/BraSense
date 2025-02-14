@@ -2,6 +2,7 @@
 #include <ESPAsyncWebServer.h>
 #include <WiFi.h>
 #include <Wire.h>
+#include <esp_system.h>
 
 #include "Arduino.h"
 #include "index.h"
@@ -11,11 +12,12 @@
 #include "websocket_handler.h"
 
 unsigned long lastTime = 0;
-unsigned long interval = 10;
+unsigned long interval = 50;
 
 void setup() {
     Serial.begin(115200);
-
+    esp_reset_reason_t reason = esp_reset_reason();
+    
     EEPROM.begin(128);
     Wire.begin();
     Wire.setClock(400000UL);
@@ -27,6 +29,8 @@ void setup() {
     loadFileCounter();
     createNewMeasurementFile();
     setupWebSocket();
+    Serial.print("Reset reason: ");
+    Serial.println((int)reason);
 }
 
 void loop() {
