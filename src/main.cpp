@@ -17,7 +17,7 @@ unsigned long interval = 50;
 void setup() {
     Serial.begin(115200);
     esp_reset_reason_t reason = esp_reset_reason();
-    
+
     EEPROM.begin(128);
     Wire.begin();
     Wire.setClock(400000UL);
@@ -39,13 +39,11 @@ void loop() {
     if (isMeasuring && digitalRead(MyMTi->drdy)) {
         MyMTi->readMessages();
 
-        if (!isnan(MyMTi->getAcceleration()[0])) {
-            if (millis() - lastTime >= interval) {
-                logMeasurementData();
-                sendSensorData();
+        if (millis() - lastTime >= interval) {
+            logMeasurementData();
+            sendSensorData();
 
-                lastTime = millis();
-            }
+            lastTime = millis();
         }
     }
     ws.cleanupClients();

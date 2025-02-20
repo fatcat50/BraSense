@@ -155,9 +155,9 @@ String processor(const String &var) {
 }
 
 void sendSensorData() {
-    float x = MyMTi->getAcceleration()[0];
-    float y = MyMTi->getAcceleration()[1];
-    float z = MyMTi->getAcceleration()[2];
+    float x = MyMTi->getEulerAngles()[0];
+    float y = MyMTi->getEulerAngles()[1];
+    float z = MyMTi->getEulerAngles()[2];
 
     String json = "{\"x\": " + String(x, 2) + ", \"y\": " + String(y, 2) +
                   ", \"z\": " + String(z, 2) + "}";

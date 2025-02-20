@@ -43,7 +43,7 @@ void startMeasurement() {
 
     openFile();
     file.println(">>>> Measurement #" + String(recordCounter) + " START <<<<");
-    file.println("Time [s];Data Point;X [m/s^2];Y [m/s^2];Z [m/s^2]");
+    file.println("Time [s];Data Point;X [deg];Y [deg];Z [deg]");
     print();
     ws.textAll(String(isMeasuring));
 }
@@ -60,6 +60,7 @@ void stopMeasurement() {
 void logMeasurementData() {
     float timestamp = (millis() - measurementStartTime) / 1000.0;
     char timeStr[10];
+    const uint32_t FLUSH_INTERVAL = 100;
     measurementCounter++;
     dtostrf(timestamp, 6, 2, timeStr);
     file.print(timeStr);
@@ -70,20 +71,20 @@ void logMeasurementData() {
 
     file.print(cnt);
     file.print(";");
+    if (!isnan(MyMTi->getEulerAngles()[0])) {
+        for (int i = 0; i < 3; ++i) {
+            char str[32];
+            dtostrf(MyMTi->getEulerAngles()[i], 8, 2, str);
+            file.print(str);
+            if (i < 2) file.print(";");
+        }
+        file.println();
 
-    for (int i = 0; i < 3; ++i) {
-        char str[32];
-        dtostrf(MyMTi->getAcceleration()[i], 8, 2, str);
-        file.print(str);
-        if (i < 2) file.print(";");
-    }
-    file.println();
-
-    static const uint32_t FLUSH_INTERVAL = 100; // z.B. alle 100 Messwerte
-    if (measurementCounter % FLUSH_INTERVAL == 0) {
-        file.flush();  // SD-Puffer leeren
-        //Serial.println("FLUSHED");
-        delay(1);      // Watchdog-Reset ermöglichen
+        if (measurementCounter % FLUSH_INTERVAL == 0) {
+            file.flush();  // SD-Puffer leeren
+            // Serial.println("FLUSHED");
+            delay(1);  // Watchdog-Reset ermöglichen
+        }
     }
 }
 
