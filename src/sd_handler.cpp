@@ -47,7 +47,7 @@ void createNewMeasurementFile() {
     if (!file) {
         Serial.println("Fehler beim Erstellen der neuen Datei!");
     } else {
-        file.close();
+        //file.close();
         Serial.println("Neue Datei erstellt: " + currentFileName);
     }
 

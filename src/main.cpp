@@ -12,7 +12,7 @@
 #include "websocket_handler.h"
 
 unsigned long lastTime = 0;
-unsigned long interval = 50;
+unsigned long interval = 100;
 
 void setup() {
     Serial.begin(115200);
@@ -21,9 +21,10 @@ void setup() {
     EEPROM.begin(128);
     Wire.begin();
     Wire.setClock(400000UL);
+    delay(500);  // Delay 0.5sec to allow I2C bus to stabilize
+
     initWiFi();
     initTime();
-    initMTi();
     initMeasurement();
     initSDCard();
     loadFileCounter();
@@ -31,19 +32,22 @@ void setup() {
     setupWebSocket();
     Serial.print("Reset reason: ");
     Serial.println((int)reason);
+    initMTi();
 }
 
 void loop() {
     handleButtonPress();
 
-    if (isMeasuring && digitalRead(MyMTi->drdy)) {
+    if (digitalRead(MyMTi->drdy)) {
         MyMTi->readMessages();
-        logMeasurementData();
+        if (isMeasuring) {
+            logMeasurementData();
 
-        if (millis() - lastTime >= interval) {
-            sendSensorData();
+            if (millis() - lastTime >= interval) {
+                sendSensorData();
 
-            lastTime = millis();
+                lastTime = millis();
+            }
         }
     }
     ws.cleanupClients();

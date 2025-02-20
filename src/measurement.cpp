@@ -18,17 +18,17 @@ MTi *MyMTi = NULL;
 void print() {
     Serial.print("Measurement " + String(recordCounter) + " : ");
     Serial.println(isMeasuring ? "STARTED" : "STOPPED");
-    digitalWrite(LED_BUILTIN, isMeasuring);
+    //digitalWrite(LED_BUILTIN, isMeasuring);
 }
 
 void initMTi() {
     pinMode(3, INPUT);
 
     MyMTi = new MTi(0x6B, 3);
-    if (!MyMTi->detect(1000)) {
+    /*if (!MyMTi->detect(1000)) {
         Serial.println("MTi not detected. Check connections.");
         while (1);
-    }
+    }*/
     MyMTi->goToConfig();
     MyMTi->requestDeviceInfo();
     MyMTi->configureOutputs();
@@ -39,16 +39,18 @@ void startMeasurement() {
     isMeasuring = true;
     recordCounter++;
     measurementCounter = 0;
-    measurementStartTime = millis();
 
     openFile();
     file.println(">>>> Measurement #" + String(recordCounter) + " START <<<<");
     file.println("Time [s];Data Point;X [deg];Y [deg];Z [deg]");
     print();
     ws.textAll(String(isMeasuring));
+    //MyMTi->goToMeasurement();
+    measurementStartTime = millis();
 }
 
 void stopMeasurement() {
+    //MyMTi->goToConfig();
     isMeasuring = false;
 
     file.println(">>>> Measurement #" + String(recordCounter) + " STOP <<<<");
@@ -60,7 +62,7 @@ void stopMeasurement() {
 void logMeasurementData() {
     float timestamp = (millis() - measurementStartTime) / 1000.0;
     char timeStr[10];
-    const uint32_t FLUSH_INTERVAL = 100;
+    const uint32_t FLUSH_INTERVAL = 1000;
     measurementCounter++;
     dtostrf(timestamp, 6, 2, timeStr);
     file.print(timeStr);
@@ -80,11 +82,11 @@ void logMeasurementData() {
         }
         file.println();
 
-        if (measurementCounter % FLUSH_INTERVAL == 0) {
+        /*if (measurementCounter % FLUSH_INTERVAL == 0) {
             file.flush();  // SD-Puffer leeren
             // Serial.println("FLUSHED");
-            delay(1);  // Watchdog-Reset ermöglichen
-        }
+            //delay(1);  // Watchdog-Reset ermöglichen
+        }*/
     }
 }
 
