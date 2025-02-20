@@ -38,9 +38,9 @@ void loop() {
 
     if (isMeasuring && digitalRead(MyMTi->drdy)) {
         MyMTi->readMessages();
+        logMeasurementData();
 
         if (millis() - lastTime >= interval) {
-            logMeasurementData();
             sendSensorData();
 
             lastTime = millis();
