@@ -20,7 +20,7 @@ void setup() {
 
     EEPROM.begin(128);
     Wire.begin();
-    Wire.setClock(400000UL);
+    Wire.setClock(1000000);
     delay(500);  // Delay 0.5sec to allow I2C bus to stabilize
 
     initWiFi();
