@@ -2,6 +2,7 @@
 #include <ESPAsyncWebServer.h>
 #include <WiFi.h>
 #include <Wire.h>
+#include <SD.h>
 #include <esp_system.h>
 
 #include "Arduino.h"
@@ -12,7 +13,7 @@
 #include "websocket_handler.h"
 
 unsigned long lastTime = 0;
-unsigned long interval = 100;
+unsigned long interval = 50;
 
 void setup() {
     Serial.begin(115200);
@@ -20,7 +21,7 @@ void setup() {
 
     EEPROM.begin(128);
     Wire.begin();
-    Wire.setClock(1000000);
+    Wire.setClock(400000);
     delay(500);  // Delay 0.5sec to allow I2C bus to stabilize
 
     initWiFi();

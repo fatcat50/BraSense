@@ -7,6 +7,7 @@
 #define DEBOUNCE_DELAY 50
 
 bool isMeasuring = false;
+bool firstMeasurement = false;
 uint16_t recordCounter = 0;
 uint32_t measurementCounter = 0;
 unsigned long measurementStartTime = 0;
@@ -18,17 +19,17 @@ MTi *MyMTi = NULL;
 void print() {
     Serial.print("Measurement " + String(recordCounter) + " : ");
     Serial.println(isMeasuring ? "STARTED" : "STOPPED");
-    //digitalWrite(LED_BUILTIN, isMeasuring);
+    // digitalWrite(LED_BUILTIN, isMeasuring);
 }
 
 void initMTi() {
     pinMode(3, INPUT);
 
     MyMTi = new MTi(0x6B, 3);
-    /*if (!MyMTi->detect(1000)) {
+    if (!MyMTi->detect(1000)) {
         Serial.println("MTi not detected. Check connections.");
         while (1);
-    }*/
+    }
     MyMTi->goToConfig();
     MyMTi->requestDeviceInfo();
     MyMTi->configureOutputs();
@@ -37,6 +38,7 @@ void initMTi() {
 
 void startMeasurement() {
     isMeasuring = true;
+    firstMeasurement = true;
     recordCounter++;
     measurementCounter = 0;
 
@@ -45,12 +47,11 @@ void startMeasurement() {
     file.println("Time [s];Data Point;X [deg];Y [deg];Z [deg]");
     print();
     ws.textAll(String(isMeasuring));
-    //MyMTi->goToMeasurement();
-    measurementStartTime = millis();
+    // MyMTi->goToMeasurement();
 }
 
 void stopMeasurement() {
-    //MyMTi->goToConfig();
+    // MyMTi->goToConfig();
     isMeasuring = false;
 
     file.println(">>>> Measurement #" + String(recordCounter) + " STOP <<<<");
@@ -60,11 +61,16 @@ void stopMeasurement() {
 }
 
 void logMeasurementData() {
+    if (firstMeasurement) {
+        measurementStartTime = millis();
+        firstMeasurement = false;
+    }
     float timestamp = (millis() - measurementStartTime) / 1000.0;
+
     char timeStr[10];
     const uint32_t FLUSH_INTERVAL = 1000;
     measurementCounter++;
-    dtostrf(timestamp, 6, 2, timeStr);
+    dtostrf(timestamp, 7, 3, timeStr);
     file.print(timeStr);
     file.print(";");
 
