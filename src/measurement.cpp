@@ -11,6 +11,7 @@ bool firstMeasurement = false;
 uint16_t recordCounter = 0;
 uint32_t measurementCounter = 0;
 unsigned long measurementStartTime = 0;
+const uint32_t FLUSH_INTERVAL = 1000;
 bool buttonState = HIGH;
 bool lastButtonState = HIGH;
 unsigned long lastDebounceTime = 0;
@@ -68,7 +69,6 @@ void logMeasurementData() {
     float timestamp = (millis() - measurementStartTime) / 1000.0;
 
     char timeStr[10];
-    const uint32_t FLUSH_INTERVAL = 1000;
     measurementCounter++;
     dtostrf(timestamp, 7, 3, timeStr);
     file.print(timeStr);
