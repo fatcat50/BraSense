@@ -32,38 +32,27 @@ void createNewMeasurementFile() {
         Serial.println(
             "Fehler beim Abrufen der Zeit! Verwende Standard-Dateinamen.");
         char filename[32];
-        sprintf(filename, "/messung_%04u.csv",
+        sprintf(filename, "/messung_%04u.txt",
                 fileCounter);  // Fallback, falls Zeit nicht verfügbar
         currentFileName = String(filename);
     } else {
         char filename[32];
-        sprintf(filename, "/%02d.%02d.%04d_%02d-%02d-%02d.csv",
+        sprintf(filename, "/%02d.%02d.%04d_%02d-%02d-%02d.txt",
                 timeinfo.tm_mday, timeinfo.tm_mon + 1, timeinfo.tm_year + 1900,
                 timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
         currentFileName = String(filename);
     }
 
-    File file = SD.open(currentFileName, FILE_WRITE);
+    file = SD.open(currentFileName, FILE_WRITE);
     if (!file) {
         Serial.println("Fehler beim Erstellen der neuen Datei!");
     } else {
-        file.close();
+        //file.close();
         Serial.println("Neue Datei erstellt: " + currentFileName);
     }
 
     fileCounter++;
     saveFileCounter();
-}
-
-void appendFile(fs::FS &fs, const char *path, const char *message) {
-    File file = fs.open(path, FILE_APPEND);
-    if (!file) {
-        Serial.println("Failed to open file for appending");
-        return;
-    }
-    file.print(message);
-    file.close();
-    Serial.println("Message appended successfully");
 }
 
 void openFile() {

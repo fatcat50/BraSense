@@ -12,10 +12,16 @@ uint16_t recordCounter = 0;
 uint32_t measurementCounter = 0;
 unsigned long measurementStartTime = 0;
 const uint32_t FLUSH_INTERVAL = 1000;
+datapoint buffer[ARR_SIZE];
+size_t bufferIndex = 0;
 bool buttonState = HIGH;
 bool lastButtonState = HIGH;
 unsigned long lastDebounceTime = 0;
 MTi *MyMTi = NULL;
+
+float currentX = 0.0;
+float currentY = 0.0;
+float currentZ = 0.0;
 
 void print() {
     Serial.print("Measurement " + String(recordCounter) + " : ");
@@ -44,9 +50,12 @@ void startMeasurement() {
     measurementCounter = 0;
 
     openFile();
-    file.println(">>>> Measurement #" + String(recordCounter) + " START <<<<");
-    file.println("Time [s];Data Point;X [deg];Y [deg];Z [deg]");
-    print();
+    //file.println(">>>> Measurement #" + String(recordCounter) + " START <<<<");
+    //file.println("Time [s];Data Point;X [deg];Y [deg];Z [deg]");
+    //print();
+    while (digitalRead(MyMTi->drdy)) {
+        MyMTi->readMessages();
+    }
     ws.textAll(String(isMeasuring));
     // MyMTi->goToMeasurement();
 }
@@ -55,20 +64,34 @@ void stopMeasurement() {
     // MyMTi->goToConfig();
     isMeasuring = false;
 
-    file.println(">>>> Measurement #" + String(recordCounter) + " STOP <<<<");
+    //file.println(">>>> Measurement #" + String(recordCounter) + " STOP <<<<");
     file.close();
-    print();
+    //print();
     ws.textAll(String(isMeasuring));
 }
 
+// Logs the measurement data to the SD card and WebSocket
 void logMeasurementData() {
     if (firstMeasurement) {
-        measurementStartTime = millis();
+        measurementStartTime = esp_timer_get_time();
         firstMeasurement = false;
     }
-    float timestamp = (millis() - measurementStartTime) / 1000.0;
+    float timestamp = (esp_timer_get_time() - measurementStartTime) / 1e6;;
 
-    char timeStr[10];
+    float* angles = MyMTi->getEulerAngles();
+    currentX = angles[0];
+    currentY = angles[1];
+    currentZ = angles[2];
+
+    buffer[bufferIndex] = {timestamp, currentX, currentY, currentZ};
+    bufferIndex++;
+
+    if (bufferIndex >= ARR_SIZE) {
+        file.write((byte*)buffer, sizeof(buffer));
+        bufferIndex = 0;
+    }
+
+    /*char timeStr[10];
     measurementCounter++;
     dtostrf(timestamp, 7, 3, timeStr);
     file.print(timeStr);
@@ -93,7 +116,7 @@ void logMeasurementData() {
             // Serial.println("FLUSHED");
             //delay(1);  // Watchdog-Reset ermöglichen
         }*/
-    }
+    //}
 }
 
 void initMeasurement() {

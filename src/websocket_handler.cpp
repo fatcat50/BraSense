@@ -155,11 +155,8 @@ String processor(const String &var) {
 }
 
 void sendSensorData() {
-    float x = MyMTi->getEulerAngles()[0];
-    float y = MyMTi->getEulerAngles()[1];
-    float z = MyMTi->getEulerAngles()[2];
-
-    String json = "{\"x\": " + String(x, 2) + ", \"y\": " + String(y, 2) +
-                  ", \"z\": " + String(z, 2) + "}";
+    String json = "{\"x\":" + String(currentX, 2) +
+                  ",\"y\":" + String(currentY, 2) +
+                  ",\"z\":" + String(currentZ, 2) + "}";
     ws.textAll(json);
 }
