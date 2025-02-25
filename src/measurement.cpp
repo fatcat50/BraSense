@@ -1,5 +1,4 @@
 #include "measurement.h"
-
 #include "sd_handler.h"
 #include "websocket_handler.h"
 
@@ -18,7 +17,6 @@ datapoint buffer2[ARR_SIZE];
 datapoint* currentBuffer = buffer1;
 datapoint* writeBuffer = buffer2;
 size_t bufferIndex = 0;
-QueueHandle_t sdQueue = NULL; // Global definieren
 bool bufferFull = false;
 
 bool buttonState = HIGH;
