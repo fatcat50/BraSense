@@ -5,7 +5,7 @@
 
 #include "MTi.h"
 #include "SD.h"
-#define ARR_SIZE 100
+#define ARR_SIZE 50
 
 extern bool isMeasuring;
 extern uint32_t measurementCounter;

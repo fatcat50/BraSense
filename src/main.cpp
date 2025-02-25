@@ -17,7 +17,7 @@
 #include "websocket_handler.h"
 
 unsigned long lastTime = 0;
-unsigned long interval = 100;
+unsigned long interval = 10;
 // QueueHandle_t sdQueue;
 
 // Task-Handle für Core 0
@@ -69,20 +69,19 @@ void setup() {
 
     xTaskCreatePinnedToCore(sdTask,  // SD-Schreiben
                             "SDTask", 4096, NULL,
-                            1,  // Priorität (unter WebSocket)
+                            2,  // Priorität
                             NULL,
                             0  // Core 0
     );
 
-    /*xTaskCreatePinnedToCore(
-        wsTask,        // Task-Funktion
-        "WebSocket",   // Name
-        4096,          // Stack-Größe
-        NULL,          // Parameter
-        2,             // Priorität
-        &wsTaskHandle, // Task-Handle
-        0              // Core 0
-    );*/
+    xTaskCreatePinnedToCore(wsTask,         // Task-Funktion
+                            "WebSocket",    // Name
+                            4096,           // Stack-Größe
+                            NULL,           // Parameter
+                            1,              // Priorität
+                            &wsTaskHandle,  // Task-Handle
+                            0               // Core 0
+    );
 }
 
 void loop() {
@@ -91,13 +90,13 @@ void loop() {
         if (isMeasuring) {
             logMeasurementData();
 
-            if (millis() - lastTime >= interval) {
+            /*if (millis() - lastTime >= interval) {
                 sendSensorData();
 
                 lastTime = millis();
-            }
+            }*/
         }
     }
     handleButtonPress();
-    ws.cleanupClients();
+    // ws.cleanupClients();
 }
