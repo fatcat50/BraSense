@@ -5,6 +5,8 @@ String currentFileName;
 File file;
 
 bool initSDCard() {
+    EEPROM.begin(128);
+
     if (!SD.begin()) {
         Serial.println("SD-Karte konnte nicht initialisiert werden.");
         return false;
@@ -47,7 +49,7 @@ void createNewMeasurementFile() {
     if (!file) {
         Serial.println("Fehler beim Erstellen der neuen Datei!");
     } else {
-        //file.close();
+        // file.close();
         Serial.println("Neue Datei erstellt: " + currentFileName);
     }
 

@@ -1,15 +1,15 @@
 #include "tasks.h"
-#include "measurement.h"
-#include "sd_handler.h"
-#include "websocket_handler.h"
+
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <queue.h>
 
+#include "measurement.h"
+#include "sd_handler.h"
+#include "websocket_handler.h"
+
 unsigned long lastTime = 0;
 unsigned int interval = 50;
-
-QueueHandle_t sdQueue = xQueueCreate(10, sizeof(datapoint[ARR_SIZE]));
 
 void sdTask(void *pvParam) {
     while (1) {
@@ -32,23 +32,15 @@ void wsTask(void *pvParam) {
 }
 
 void createTasks() {
-    xTaskCreatePinnedToCore(
-        sdTask,
-        "SDTask",
-        4096,
-        NULL,
-        2,  // Priority
-        NULL,
-        0   // Core
+    xTaskCreatePinnedToCore(sdTask, "SDTask", 4096, NULL,
+                            2,  // Priority
+                            NULL,
+                            0  // Core
     );
 
-    xTaskCreatePinnedToCore(
-        wsTask,
-        "WebSocket",
-        4096,
-        NULL,
-        1,            // Priority
-        NULL,
-        0             // Core
+    xTaskCreatePinnedToCore(wsTask, "WebSocket", 4096, NULL,
+                            1,  // Priority
+                            NULL,
+                            0  // Core
     );
 }

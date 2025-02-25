@@ -1,4 +1,8 @@
 #include "measurement.h"
+
+#include <Wire.h>
+
+#include "esp_timer.h"
 #include "sd_handler.h"
 #include "websocket_handler.h"
 
@@ -10,19 +14,20 @@ bool firstMeasurement = false;
 uint16_t recordCounter = 0;
 uint32_t measurementCounter = 0;
 unsigned long measurementStartTime = 0;
-const uint32_t FLUSH_INTERVAL = 1000;
+
 datapoint buffer[ARR_SIZE];
 datapoint buffer1[ARR_SIZE];
 datapoint buffer2[ARR_SIZE];
 datapoint* currentBuffer = buffer1;
 datapoint* writeBuffer = buffer2;
 size_t bufferIndex = 0;
-bool bufferFull = false;
+
+QueueHandle_t sdQueue = xQueueCreate(10, sizeof(datapoint[ARR_SIZE]));
 
 bool buttonState = HIGH;
 bool lastButtonState = HIGH;
 unsigned long lastDebounceTime = 0;
-MTi *MyMTi = NULL;
+MTi* MyMTi = NULL;
 
 float currentX = 0.0;
 float currentY = 0.0;
@@ -36,6 +41,9 @@ void print() {
 
 void initMTi() {
     pinMode(3, INPUT);
+    Wire.begin();
+    Wire.setClock(400000);
+    delay(500);  // Delay 0.5sec to allow I2C bus to stabilize
 
     MyMTi = new MTi(0x6B, 3);
     if (!MyMTi->detect(1000)) {
@@ -55,9 +63,9 @@ void startMeasurement() {
     measurementCounter = 0;
 
     openFile();
-    //file.println(">>>> Measurement #" + String(recordCounter) + " START <<<<");
-    //file.println("Time [s];Data Point;X [deg];Y [deg];Z [deg]");
-    //print();
+    // file.println(">>>> Measurement #" + String(recordCounter) + " START
+    // <<<<"); file.println("Time [s];Data Point;X [deg];Y [deg];Z [deg]");
+    // print();
     while (digitalRead(MyMTi->drdy)) {
         MyMTi->readMessages();
     }
@@ -69,9 +77,10 @@ void stopMeasurement() {
     // MyMTi->goToConfig();
     isMeasuring = false;
 
-    //file.println(">>>> Measurement #" + String(recordCounter) + " STOP <<<<");
+    // file.println(">>>> Measurement #" + String(recordCounter) + " STOP
+    // <<<<");
     file.close();
-    //print();
+    // print();
     ws.textAll(String(isMeasuring));
 }
 
@@ -81,7 +90,8 @@ void logMeasurementData() {
         measurementStartTime = esp_timer_get_time();
         firstMeasurement = false;
     }
-    float timestamp = (esp_timer_get_time() - measurementStartTime) / 1e6;;
+    float timestamp = (esp_timer_get_time() - measurementStartTime) / 1e6;
+    ;
 
     float* angles = MyMTi->getEulerAngles();
     currentX = angles[0];
@@ -98,7 +108,8 @@ void logMeasurementData() {
         writeBuffer = tempBuffer;
 
         // Send the full buffer to the queue
-        xQueueSend(sdQueue, writeBuffer, pdMS_TO_TICKS(100)); // Core 0 übernimmt
+        xQueueSend(sdQueue, writeBuffer,
+                   pdMS_TO_TICKS(100));  // Core 0 übernimmt
         bufferIndex = 0;
     }
 
