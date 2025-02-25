@@ -17,7 +17,7 @@
 #include "websocket_handler.h"
 
 unsigned long lastTime = 0;
-unsigned long interval = 10;
+unsigned long interval = 50;
 // QueueHandle_t sdQueue;
 
 // Task-Handle für Core 0
@@ -89,14 +89,7 @@ void loop() {
         MyMTi->readMessages();
         if (isMeasuring) {
             logMeasurementData();
-
-            /*if (millis() - lastTime >= interval) {
-                sendSensorData();
-
-                lastTime = millis();
-            }*/
         }
     }
     handleButtonPress();
-    // ws.cleanupClients();
 }
