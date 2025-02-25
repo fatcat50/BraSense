@@ -8,34 +8,33 @@ bool initSDCard() {
     EEPROM.begin(128);
 
     if (!SD.begin()) {
-        Serial.println("SD-Karte konnte nicht initialisiert werden.");
+        Serial.println("Failed to initialize SD card.");
         return false;
     }
-    Serial.println("SD-Karte erfolgreich initialisiert.");
+    Serial.println("SD card successfully initialized.");
     return true;
 }
 
 void loadFileCounter() {
     EEPROM.get(0, fileCounter);
-    Serial.print("Aktueller Datei-Zähler: ");
-    Serial.println(fileCounter);
+    // Serial.print("Current file counter: ");
+    // Serial.println(fileCounter);
 }
 
 void saveFileCounter() {
     EEPROM.put(0, fileCounter);
     EEPROM.commit();
-    Serial.print("Neuer Datei-Zähler gespeichert: ");
-    Serial.println(fileCounter);
+    // Serial.print("New file counter saved: ");
+    // Serial.println(fileCounter);
 }
 
 void createNewMeasurementFile() {
     struct tm timeinfo;
     if (!getLocalTime(&timeinfo)) {
-        Serial.println(
-            "Fehler beim Abrufen der Zeit! Verwende Standard-Dateinamen.");
+        Serial.println("Error retrieving time! Using default filename.");
         char filename[32];
         sprintf(filename, "/messung_%04u.csv",
-                fileCounter);  // Fallback, falls Zeit nicht verfügbar
+                fileCounter);  // Fallback, if time is not available
         currentFileName = String(filename);
     } else {
         char filename[32];
@@ -47,10 +46,9 @@ void createNewMeasurementFile() {
 
     file = SD.open(currentFileName, FILE_WRITE);
     if (!file) {
-        Serial.println("Fehler beim Erstellen der neuen Datei!");
+        Serial.println("Error opening file in write mode");
     } else {
-        // file.close();
-        Serial.println("Neue Datei erstellt: " + currentFileName);
+        Serial.println("New file created: " + currentFileName);
     }
 
     fileCounter++;

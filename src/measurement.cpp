@@ -91,7 +91,6 @@ void logMeasurementData() {
         firstMeasurement = false;
     }
     float timestamp = (esp_timer_get_time() - measurementStartTime) / 1e6;
-    ;
 
     float* angles = MyMTi->getEulerAngles();
     currentX = angles[0];
