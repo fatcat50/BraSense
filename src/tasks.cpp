@@ -7,7 +7,7 @@
 #include <queue.h>
 
 unsigned long lastTime = 0;
-unsigned long interval = 50;
+unsigned int interval = 50;
 
 QueueHandle_t sdQueue = xQueueCreate(10, sizeof(datapoint[ARR_SIZE]));
 
