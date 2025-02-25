@@ -13,7 +13,14 @@ uint32_t measurementCounter = 0;
 unsigned long measurementStartTime = 0;
 const uint32_t FLUSH_INTERVAL = 1000;
 datapoint buffer[ARR_SIZE];
+datapoint buffer1[ARR_SIZE];
+datapoint buffer2[ARR_SIZE];
+datapoint* currentBuffer = buffer1;
+datapoint* writeBuffer = buffer2;
 size_t bufferIndex = 0;
+QueueHandle_t sdQueue = NULL; // Global definieren
+bool bufferFull = false;
+
 bool buttonState = HIGH;
 bool lastButtonState = HIGH;
 unsigned long lastDebounceTime = 0;
@@ -83,11 +90,17 @@ void logMeasurementData() {
     currentY = angles[1];
     currentZ = angles[2];
 
-    buffer[bufferIndex] = {timestamp, currentX, currentY, currentZ};
+    currentBuffer[bufferIndex] = {timestamp, currentX, currentY, currentZ};
     bufferIndex++;
 
     if (bufferIndex >= ARR_SIZE) {
-        file.write((byte*)buffer, sizeof(buffer));
+        // Swap buffers
+        datapoint* tempBuffer = currentBuffer;
+        currentBuffer = writeBuffer;
+        writeBuffer = tempBuffer;
+
+        // Send the full buffer to the queue
+        xQueueSend(sdQueue, writeBuffer, pdMS_TO_TICKS(100)); // Core 0 übernimmt
         bufferIndex = 0;
     }
 

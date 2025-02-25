@@ -5,7 +5,7 @@
 
 #include "MTi.h"
 #include "SD.h"
-#define ARR_SIZE 50
+#define ARR_SIZE 100
 
 extern bool isMeasuring;
 extern uint32_t measurementCounter;
@@ -13,6 +13,8 @@ extern uint16_t recordCounter;
 extern uint16_t fileCounter;
 extern String currentFileName;
 extern MTi *MyMTi;
+extern QueueHandle_t sdQueue;
+extern bool bufferFull;
 extern float currentX, currentY, currentZ;
 
 typedef struct {
@@ -22,7 +24,7 @@ typedef struct {
     float z1;
 } datapoint;
 
-//extern datapoint buffer[ARR_SIZE];
+extern datapoint buffer[ARR_SIZE];
 
 void print();
 void initMTi();

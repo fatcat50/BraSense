@@ -1,11 +1,12 @@
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
+#include <SD.h>
 #include <WiFi.h>
 #include <Wire.h>
-#include <SD.h>
 #include <esp_system.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include <queue.h>
 
 #include "Arduino.h"
 #include "esp_timer.h"
@@ -17,9 +18,20 @@
 
 unsigned long lastTime = 0;
 unsigned long interval = 100;
+// QueueHandle_t sdQueue;
 
 // Task-Handle für Core 0
 TaskHandle_t wsTaskHandle = NULL;
+
+// SD-Schreib-Task (Core 0)
+void sdTask(void *pvParam) {
+    while (1) {
+        if (xQueueReceive(sdQueue, &buffer, portMAX_DELAY)) {
+            file.write((byte *)buffer, sizeof(buffer));
+        }
+        vTaskDelay(1);  // Kurze Pause
+    }
+}
 
 // Task-Funktion für WebSocket-Daten (Core 0)
 void wsTask(void *pvParam) {
@@ -28,9 +40,9 @@ void wsTask(void *pvParam) {
             sendSensorData();
             lastTime = millis();
         }
-        ws.cleanupClients(); 
+        ws.cleanupClients();
 
-        vTaskDelay(pdMS_TO_TICKS(10)); // Kurze Verzögerung
+        vTaskDelay(pdMS_TO_TICKS(10));  // Kurze Verzögerung
     }
 }
 
@@ -53,15 +65,24 @@ void setup() {
     Serial.print("Reset reason: ");
     Serial.println((int)reason);
     initMTi();
-    xTaskCreatePinnedToCore(
+    sdQueue = xQueueCreate(10, sizeof(datapoint[ARR_SIZE]));
+
+    xTaskCreatePinnedToCore(sdTask,  // SD-Schreiben
+                            "SDTask", 4096, NULL,
+                            1,  // Priorität (unter WebSocket)
+                            NULL,
+                            0  // Core 0
+    );
+
+    /*xTaskCreatePinnedToCore(
         wsTask,        // Task-Funktion
         "WebSocket",   // Name
         4096,          // Stack-Größe
         NULL,          // Parameter
-        1,             // Priorität (niedriger als Sensor-Tasks)
+        2,             // Priorität
         &wsTaskHandle, // Task-Handle
         0              // Core 0
-    );
+    );*/
 }
 
 void loop() {
@@ -70,13 +91,13 @@ void loop() {
         if (isMeasuring) {
             logMeasurementData();
 
-            /*if (millis() - lastTime >= interval) {
+            if (millis() - lastTime >= interval) {
                 sendSensorData();
 
                 lastTime = millis();
-            }*/
+            }
         }
     }
     handleButtonPress();
-    //ws.cleanupClients();
+    ws.cleanupClients();
 }
