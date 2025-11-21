@@ -16,6 +16,8 @@ const int daylightOffset_sec = 3600;
 AsyncWebSocket ws("/ws");
 AsyncWebServer server(80);
 
+char json[64];
+
 void initWiFi() {
   /*WiFi.mode(WIFI_AP);
     WiFi.softAP(ssid, password);
@@ -23,6 +25,7 @@ void initWiFi() {
     */
 
   WiFi.begin(ssid, password);
+  WiFi.setSleep(false);
 
   Serial.print("Connecting to WiFi ..");
   while (WiFi.status() != WL_CONNECTED) {
@@ -145,6 +148,9 @@ String processor(const String &var) {
 }
 
 void sendSensorData() {
-  String json = "{\"x\":" + String(currentX, 2) + ",\"y\":" + String(currentY, 2) + ",\"z\":" + String(currentZ, 2) + "}";
+  snprintf(json, sizeof(json),
+           "{\"x\":%.2f,\"y\":%.2f,\"z\":%.2f}",
+           currentX, currentY, currentZ);
+
   ws.textAll(json);
 }

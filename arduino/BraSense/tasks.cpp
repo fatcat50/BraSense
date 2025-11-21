@@ -22,12 +22,12 @@ void sdTask(void *pvParam) {
 
 void wsTask(void *pvParam) {
     while (1) {
+        ws.cleanupClients(); // nach vorne
         if (isMeasuring && millis() - lastTime >= interval) {
             sendSensorData();
             lastTime = millis();
         }
-        ws.cleanupClients();
-        vTaskDelay(pdMS_TO_TICKS(10));
+        vTaskDelay(1);
     }
 }
 
@@ -38,9 +38,9 @@ void createTasks() {
                             0  // Core
     );
 
-    xTaskCreatePinnedToCore(wsTask, "WebSocket", 4096, NULL,
+    xTaskCreatePinnedToCore(wsTask, "WebSocket", 6144, NULL,
                             1,  // Priority
                             NULL,
-                            0  // Core
+                            1  // Core
     );
 }
