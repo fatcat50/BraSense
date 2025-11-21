@@ -3,7 +3,7 @@
 #include "index.h"
 #include "measurement.h"
 
-const char *ssid = "WLAN-Kornfeind";
+const char *ssid = "iPhone 13";
 const char *password = "Vbk70Mfk75Kvh96Mfk00";
 
 const char *ntpServer = "pool.ntp.org";
@@ -17,29 +17,29 @@ AsyncWebSocket ws("/ws");
 AsyncWebServer server(80);
 
 void initWiFi() {
-    /*WiFi.mode(WIFI_AP);
+  /*WiFi.mode(WIFI_AP);
     WiFi.softAP(ssid, password);
     Serial.println(WiFi.softAPIP());
     */
 
-    WiFi.begin(ssid, password);
+  WiFi.begin(ssid, password);
 
-    Serial.print("Connecting to WiFi ..");
-    while (WiFi.status() != WL_CONNECTED) {
-        Serial.print('.');
-        delay(1000);
-    }
-    Serial.println(WiFi.localIP());
+  Serial.print("Connecting to WiFi ..");
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print('.');
+    delay(1000);
+  }
+  Serial.println(WiFi.localIP());
 }
 
 void printLocalTime() {
-    struct tm timeinfo;
-    if (!getLocalTime(&timeinfo)) {
-        Serial.println("Failed to obtain time");
-        return;
-    }
-    Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
-    /*Serial.print("Day of week: ");
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) {
+    Serial.println("Failed to obtain time");
+    return;
+  }
+  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+  /*Serial.print("Day of week: ");
     Serial.println(&timeinfo, "%A");
     Serial.print("Month: ");
     Serial.println(&timeinfo, "%B");
@@ -68,95 +68,83 @@ void printLocalTime() {
 }
 
 void initTime() {
-    configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-    // printLocalTime();
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  // printLocalTime();
 }
 
 void setupWebSocket() {
-    ws.onEvent(eventHandler);
-    server.addHandler(&ws);
+  ws.onEvent(eventHandler);
+  server.addHandler(&ws);
 
-    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send_P(200, "text/html", index_html, processor);
-    });
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send_P(200, "text/html", index_html, processor);
+  });
 
-    server.on("/downloadLog", HTTP_GET, [](AsyncWebServerRequest *request) {
-        Serial.println("==> Entered /downloadLog route <==");
+  server.on("/downloadBin", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (isMeasuring) {
+      request->send(403, "text/plain", "Stop measurement first!");
+      return;
+    }
+    if (!SD.exists(currentFileName)) {
+      request->send(404, "text/plain", "Binary file not found");
+      return;
+    }
 
-        if (isMeasuring) {
-            Serial.println("   isMeasuring == true => 403");
-            request->send(403, "text/plain",
-                          "Measurement still running. Please stop first.");
-            return;
-        }
+    auto *response = request->beginResponse(
+      SD, currentFileName, "application/octet-stream");
+    response->addHeader("Content-Disposition", "attachment; filename=\"log.bin\"");
+    request->send(response);
+  });
 
-        // Serial.println("   Checking if file exists...");
-        // Serial.println("   currentFileName = " + currentFileName);
-
-        if (!SD.exists(currentFileName)) {
-            Serial.println("   File does not exist => 404");
-            request->send(404, "text/plain", "Log file not found.");
-            return;
-        }
-
-        // Serial.println("   File found, streaming...");
-        AsyncWebServerResponse *response =
-            request->beginResponse(SD, currentFileName, "text/csv");
-        request->send(response);
-        // Serial.println("   response->send() called.");
-    });
-    server.begin();
+  server.begin();
 }
 
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
-    AwsFrameInfo *info = (AwsFrameInfo *)arg;
-    if (info->final && info->index == 0 && info->len == len &&
-        info->opcode == WS_TEXT) {
-        data[len] = 0;
-        if (strcmp((char *)data, "toggle") == 0) {
-            isMeasuring = !isMeasuring;
+  AwsFrameInfo *info = (AwsFrameInfo *)arg;
+  if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
+    data[len] = 0;
+    if (strcmp((char *)data, "toggle") == 0) {
+      isMeasuring = !isMeasuring;
 
-            if (isMeasuring) {
-                startMeasurement();
-            } else {
-                stopMeasurement();
-            }
-        }
+      if (isMeasuring) {
+        startMeasurement();
+      } else {
+        stopMeasurement();
+      }
     }
+  }
 }
 
 void eventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client,
                   AwsEventType type, void *arg, uint8_t *data, size_t len) {
-    switch (type) {
-        case WS_EVT_CONNECT:
-            Serial.printf("WebSocket client #%u connected from %s\n",
-                          client->id(), client->remoteIP().toString().c_str());
-            break;
-        case WS_EVT_DISCONNECT:
-            Serial.printf("WebSocket client #%u disconnected\n", client->id());
-            break;
-        case WS_EVT_DATA:
-            handleWebSocketMessage(arg, data, len);
-            break;
-        case WS_EVT_PONG:
-        case WS_EVT_ERROR:
-            break;
-    }
+  switch (type) {
+    case WS_EVT_CONNECT:
+      Serial.printf("WebSocket client #%u connected from %s\n",
+                    client->id(), client->remoteIP().toString().c_str());
+      break;
+    case WS_EVT_DISCONNECT:
+      Serial.printf("WebSocket client #%u disconnected\n", client->id());
+      break;
+    case WS_EVT_DATA:
+      handleWebSocketMessage(arg, data, len);
+      break;
+    case WS_EVT_PONG:
+    case WS_EVT_ERROR:
+      break;
+  }
 }
 
 String processor(const String &var) {
-    if (var == "STATE") {
-        return isMeasuring ? "Measuring..." : "Standby";
-    }
-    if (var == "CHECK") {
-        return isMeasuring ? "checked" : "";
-    }
-    return String();
+  if (var == "STATE") {
+    return isMeasuring ? "Measuring..." : "Standby";
+  }
+  if (var == "CHECK") {
+    return isMeasuring ? "checked" : "";
+  }
+  return String();
 }
 
 void sendSensorData() {
-    String json = "{\"x\":" + String(currentX, 2) +
-                  ",\"y\":" + String(currentY, 2) +
-                  ",\"z\":" + String(currentZ, 2) + "}";
-    ws.textAll(json);
+  String json = "{\"x\":" + String(currentX, 2) + ",\"y\":" + String(currentY, 2) + ",\"z\":" + String(currentZ, 2) + "}";
+  ws.textAll(json);
 }

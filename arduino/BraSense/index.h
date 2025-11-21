@@ -1,5 +1,5 @@
-#ifndef INDEX_H
-#define INDEX_H
+#ifndef INDEX_H 
+#define INDEX_H 
 
 const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
@@ -90,7 +90,9 @@ const char index_html[] PROGMEM = R"rawliteral(
       <label for="toggle-btn"></label>
     </div>
 
-    <button onclick="downloadFile()">Download Log</button>
+    <button id="download-btn" onclick="downloadAndConvert()">
+      Download Log-File
+    </button>
 
     <div id="charts-container"></div>
 
@@ -101,7 +103,7 @@ const char index_html[] PROGMEM = R"rawliteral(
       let charts = [];
       let chartCounter = 0;
       let startTime = null; // Startzeit erst setzen, wenn Messung startet
-      let isMeasuring = false; // Zustand der Messung
+      let isMeasuring = false;
 
       window.addEventListener("load", function () {
         websocket = new WebSocket(`ws://${window.location.hostname}/ws`);
@@ -121,6 +123,17 @@ const char index_html[] PROGMEM = R"rawliteral(
         websocket.onmessage = function (event) {
           console.log("WebSocket Data:", event.data);
 
+          // 1) Erst Steuer-Messages "1"/"0" behandeln
+          if (event.data === "1") {
+            setMeasuringUI(true);
+            return;
+          }
+          if (event.data === "0") {
+            setMeasuringUI(false);
+            return;
+          }
+
+          // 2) Alles andere versuchen als JSON (Sensordaten)
           try {
             let data = JSON.parse(event.data);
 
@@ -132,19 +145,6 @@ const char index_html[] PROGMEM = R"rawliteral(
               if (isMeasuring) {
                 updateCurrentChart(data.x, data.y, data.z);
               }
-            } else if (event.data == "1") {
-              document.getElementById("state").innerHTML =
-                "State: Measuring...";
-              document.getElementById("toggle-btn").checked = true;
-              document.querySelector("button").disabled = true;
-
-              startMeasurement();
-            } else if (event.data == "0") {
-              document.getElementById("state").innerHTML = "State: Standby";
-              document.getElementById("toggle-btn").checked = false;
-              document.querySelector("button").disabled = false;
-
-              stopMeasurement();
             }
           } catch (e) {
             console.log("Fehler beim Verarbeiten der WebSocket-Daten:", e);
@@ -158,32 +158,82 @@ const char index_html[] PROGMEM = R"rawliteral(
           });
       });
 
-      function downloadFile() {
-        fetch("/downloadLog")
-          .then((response) => {
-            if (!response.ok) {
-              throw new Error(
-                "Network response was not OK: " + response.status
-              );
-            }
-            return response.blob();
-          })
-          .then((blob) => {
-            const objectURL = URL.createObjectURL(blob);
+      // UI bei Start/Stop der Messung umschalten
+      function setMeasuringUI(running) {
+        isMeasuring = running;
 
-            const link = document.createElement("a");
-            link.href = objectURL;
-            link.download = "currentLog.csv";
+        document.getElementById("state").innerHTML =
+          "State: " + (running ? "Measuring..." : "Standby");
+        document.getElementById("toggle-btn").checked = running;
 
-            document.body.appendChild(link);
-            link.click();
+        // Download-Button ein/aus
+        const dlBtn = document.getElementById("download-btn");
+        if (dlBtn) dlBtn.disabled = running;
 
-            document.body.removeChild(link);
-            URL.revokeObjectURL(objectURL);
-          })
-          .catch((err) => {
-            console.error("Download error:", err);
+        if (running) {
+          startMeasurement();
+        } else {
+          stopMeasurement();
+        }
+      }
+
+      // Binär -> CSV im Browser
+      async function downloadAndConvert() {
+        try {
+          // 1. Binärdaten vom ESP holen
+          const response = await fetch("/downloadBin");
+          if (!response.ok) {
+            alert("Fehler beim Download: " + response.status);
+            return;
+          }
+
+          const buffer = await response.arrayBuffer();
+
+          // => 4 Floats (time, x, y, z), Little-Endian
+          const recordSize = 4 * 4; // 4 floats * 4 bytes
+          const view = new DataView(buffer);
+          const numRecords = Math.floor(buffer.byteLength / recordSize);
+
+          console.log("Bytes:", buffer.byteLength, "Records:", numRecords);
+
+          const lines = [];
+          lines.push("Time [s];X [deg];Y [deg];Z [deg]");
+
+          for (let i = 0; i < numRecords; i++) {
+            const offset = i * recordSize;
+
+            const time = view.getFloat32(offset + 0, true); // little endian
+            const x = view.getFloat32(offset + 4, true);
+            const y = view.getFloat32(offset + 8, true);
+            const z = view.getFloat32(offset + 12, true);
+
+            const tStr = time.toFixed(3).replace(".", ",");
+            const xStr = x.toFixed(2).replace(".", ",");
+            const yStr = y.toFixed(2).replace(".", ",");
+            const zStr = z.toFixed(2).replace(".", ",");
+
+            lines.push(`${tStr};${xStr};${yStr};${zStr}`);
+          }
+
+          const csvContent = lines.join("\r\n");
+
+          // 3. CSV-Download im Browser auslösen
+          const blob = new Blob([csvContent], {
+            type: "text/csv;charset=utf-8;",
           });
+          const url = URL.createObjectURL(blob);
+
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "converted_data.csv";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } catch (err) {
+          console.error(err);
+          alert("Fehler bei Download/Konvertierung (Details in der Konsole).");
+        }
       }
 
       function startMeasurement() {
@@ -265,6 +315,5 @@ const char index_html[] PROGMEM = R"rawliteral(
     </script>
   </body>
 </html>
-)rawliteral";
-
+)rawliteral"; 
 #endif // INDEX_H

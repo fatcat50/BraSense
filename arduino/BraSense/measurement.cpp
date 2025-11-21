@@ -92,7 +92,7 @@ void logMeasurementData() {
     }
     float timestamp = (esp_timer_get_time() - measurementStartTime) / 1e6;
 
-    float* angles = MyMTi->getEulerAngles();
+    float* angles = MyMTi->getAcceleration();
     currentX = angles[0];
     currentY = angles[1];
     currentZ = angles[2];
