@@ -41,6 +41,6 @@ void createTasks() {
     xTaskCreatePinnedToCore(wsTask, "WebSocket", 6144, NULL,
                             1,  // Priority
                             NULL,
-                            1  // Core
+                            0  // Core
     );
 }
