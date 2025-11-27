@@ -10,8 +10,8 @@ const char *ntpServer = "pool.ntp.org";
 const long gmtOffset_sec = 3600;
 const int daylightOffset_sec = 3600;
 
-// const char* ssid     = "ESP32";
-// const char* password = "12345678";
+//const char* ssid     = "ESP32";
+//const char* password = "12345678";
 
 AsyncWebSocket ws("/ws");
 AsyncWebServer server(80);
@@ -19,20 +19,24 @@ AsyncWebServer server(80);
 char json[64];
 
 void initWiFi() {
-  /*WiFi.mode(WIFI_AP);
-    WiFi.softAP(ssid, password);
-    Serial.println(WiFi.softAPIP());
-    */
 
-  WiFi.begin(ssid, password);
+  //ignore for client mode
+  //-- 
+  /*WiFi.mode(WIFI_AP);
+  WiFi.softAP(ssid, password);
+  Serial.println(WiFi.softAPIP());
+  */
+  //--
+
+  WiFi.begin(ssid, password); // ignore for AP Mode
   WiFi.setSleep(false);
 
-  Serial.print("Connecting to WiFi ..");
-  while (WiFi.status() != WL_CONNECTED) {
-    Serial.print('.');
-    delay(1000);
-  }
-  Serial.println(WiFi.localIP());
+  Serial.print("Connecting to WiFi .."); //ignore for AP Mode
+  while (WiFi.status() != WL_CONNECTED) { //ignore for AP Mode
+    Serial.print('.');  //ignore for AP Mode
+    delay(1000);  //ignore for AP Mode
+  } //ignore for AP Mode
+  Serial.println(WiFi.localIP()); //ignore for AP Mode
 }
 
 void printLocalTime() {
