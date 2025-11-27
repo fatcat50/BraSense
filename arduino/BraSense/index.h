@@ -207,7 +207,7 @@ const char index_html[] PROGMEM = R"rawliteral(
             const y = view.getFloat32(offset + 8, true);
             const z = view.getFloat32(offset + 12, true);
 
-            const tStr = time.toFixed(3).replace(".", ",");
+            const tStr = time.toFixed(4).replace(".", ",");
             const xStr = x.toFixed(2).replace(".", ",");
             const yStr = y.toFixed(2).replace(".", ",");
             const zStr = z.toFixed(2).replace(".", ",");
