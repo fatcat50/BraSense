@@ -197,7 +197,7 @@ const char index_html[] PROGMEM = R"rawliteral(
           console.log("Bytes:", buffer.byteLength, "Records:", numRecords);
 
           const lines = [];
-          lines.push("Time [s];X [deg];Y [deg];Z [deg]");
+          lines.push("Time [s];X [m/s^2];Y [m/s^2];Z [m/s^2]");
 
           for (let i = 0; i < numRecords; i++) {
             const offset = i * recordSize;
