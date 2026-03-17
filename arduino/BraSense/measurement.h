@@ -15,7 +15,7 @@
 #define PIN_SCK     48   // SCK  (~D13)
 
 // ⚠️ PIN_CS_SD: Trag hier deinen echten SD-CS-Pin ein!
-#define PIN_CS_SD   10
+#define PIN_CS_SD   21
 
 // MTi Sensor 1
 #define MTI1_CS      5   // (~D2 linke Seite)
