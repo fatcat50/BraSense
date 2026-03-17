@@ -1,88 +1,51 @@
-#ifndef INDEX_H 
-#define INDEX_H 
+#ifndef INDEX_H
+#define INDEX_H
 
 const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html>
   <head>
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, user-scalable=no"
-    />
-    <title>ESP32 WebSocket Server</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+    <title>BraSense – Dual MTi</title>
     <style>
-      html {
-        font-family: Helvetica;
-        display: inline-block;
-        margin: 0px auto;
-        text-align: center;
+      html { font-family: Helvetica; display: inline-block; margin: 0 auto; text-align: center; }
+      body { margin-top: 20px; }
+      h1   { display: none; }
+      p    { font-size: 19px; color: #888; }
+      #state { font-weight: bold; color: #444; }
+      .badge {
+        display: inline-block; padding: 2px 8px; border-radius: 10px;
+        font-size: 12px; font-weight: bold; margin-left: 6px; color: #fff;
       }
-      body {
-        margin-top: 20px;
-      }
-      h1 {
-        display: none;
-      }
-      p {
-        font-size: 19px;
-        color: #888;
-      }
-      #state {
-        font-weight: bold;
-        color: #444;
-      }
-      .switch {
-        margin: 10px auto;
-        width: 80px;
-      }
-      .toggle {
-        display: none;
-      }
+      .badge-single { background: #f59e0b; }
+      .badge-dual   { background: #10b981; }
+      .switch { margin: 10px auto; width: 80px; }
+      .toggle { display: none; }
       .toggle + label {
-        display: block;
-        position: relative;
-        cursor: pointer;
-        outline: 0;
-        user-select: none;
-        padding: 2px;
-        width: 80px;
-        height: 40px;
-        background-color: #ddd;
-        border-radius: 40px;
+        display: block; position: relative; cursor: pointer;
+        outline: 0; user-select: none; padding: 2px;
+        width: 80px; height: 40px; background-color: #ddd; border-radius: 40px;
       }
       .toggle + label:before,
       .toggle + label:after {
-        display: block;
-        position: absolute;
-        top: 1px;
-        left: 1px;
-        bottom: 1px;
-        content: "";
+        display: block; position: absolute; top: 1px; left: 1px; bottom: 1px; content: "";
       }
       .toggle + label:before {
-        right: 1px;
-        background-color: #f1f1f1;
-        border-radius: 40px;
-        transition: background 0.4s;
+        right: 1px; background-color: #f1f1f1; border-radius: 40px; transition: background 0.4s;
       }
       .toggle + label:after {
-        width: 40px;
-        background-color: #fff;
-        border-radius: 20px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-        transition: margin 0.4s;
+        width: 40px; background-color: #fff; border-radius: 20px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.3); transition: margin 0.4s;
       }
-      .toggle:checked + label:before {
-        background-color: #4285f4;
-      }
-      .toggle:checked + label:after {
-        margin-left: 42px;
-      }
+      .toggle:checked + label:before { background-color: #4285f4; }
+      .toggle:checked + label:after  { margin-left: 42px; }
+      button { margin: 4px; padding: 8px 16px; font-size: 14px; cursor: pointer; }
     </style>
   </head>
   <body>
-    <p id="state" style="font-weight: bold; margin-bottom: 5px">
+    <p id="state" style="font-weight:bold;margin-bottom:5px">
       State: <span>%STATE%</span>
+      <span id="mode-badge" class="badge"></span>
     </p>
 
     <div class="switch">
@@ -90,230 +53,158 @@ const char index_html[] PROGMEM = R"rawliteral(
       <label for="toggle-btn"></label>
     </div>
 
-    <button id="download-btn" onclick="downloadAndConvert()">
-      Download Log-File
-    </button>
+    <button id="download-btn" onclick="downloadAndConvert()">Download CSV</button>
 
     <div id="charts-container"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js/dist/chart.umd.min.js"></script>
-
     <script>
       var websocket;
-      let charts = [];
+      let charts      = [];   // [[chartS1, chartS2], ...]
       let chartCounter = 0;
-      let startTime = null; // Startzeit erst setzen, wenn Messung startet
-      let isMeasuring = false;
+      let startTime    = null;
+      let isMeasuring  = false;
+      let dualMode     = false;   // wird aus den ersten Daten erkannt
 
       window.addEventListener("load", function () {
         websocket = new WebSocket(`ws://${window.location.hostname}/ws`);
-
-        websocket.onopen = function () {
-          console.log("WebSocket connected");
-        };
-
-        websocket.onclose = function () {
-          console.log("WebSocket disconnected");
-        };
-
-        websocket.onerror = function (error) {
-          console.log("WebSocket Error:", error);
-        };
+        websocket.onopen    = () => console.log("WS verbunden");
+        websocket.onclose   = () => console.log("WS getrennt");
+        websocket.onerror   = (e) => console.log("WS Fehler:", e);
 
         websocket.onmessage = function (event) {
-          console.log("WebSocket Data:", event.data);
+          if (event.data === "1") { setMeasuringUI(true);  return; }
+          if (event.data === "0") { setMeasuringUI(false); return; }
 
-          // 1) Erst Steuer-Messages "1"/"0" behandeln
-          if (event.data === "1") {
-            setMeasuringUI(true);
-            return;
-          }
-          if (event.data === "0") {
-            setMeasuringUI(false);
-            return;
-          }
-
-          // 2) Alles andere versuchen als JSON (Sensordaten)
           try {
-            let data = JSON.parse(event.data);
-
-            if (
-              data.hasOwnProperty("x") &&
-              data.hasOwnProperty("y") &&
-              data.hasOwnProperty("z")
-            ) {
-              if (isMeasuring) {
-                updateCurrentChart(data.x, data.y, data.z);
+            let d = JSON.parse(event.data);
+            if (isMeasuring && d.hasOwnProperty("x1")) {
+              // Dual-Modus erkennen: Sensor 2 sendet Nicht-Null
+              if (!dualMode && (d.x2 !== 0 || d.y2 !== 0 || d.z2 !== 0)) {
+                dualMode = true;
+                document.getElementById("mode-badge").textContent = "DUAL";
+                document.getElementById("mode-badge").className   = "badge badge-dual";
               }
+              updateCharts(d.x1, d.y1, d.z1, d.x2, d.y2, d.z2);
             }
-          } catch (e) {
-            console.log("Fehler beim Verarbeiten der WebSocket-Daten:", e);
-          }
+          } catch(e) { console.log("Parse-Fehler:", e); }
         };
 
-        document
-          .getElementById("toggle-btn")
-          .addEventListener("change", function () {
-            websocket.send("toggle");
-          });
+        document.getElementById("toggle-btn")
+          .addEventListener("change", () => websocket.send("toggle"));
       });
 
-      // UI bei Start/Stop der Messung umschalten
       function setMeasuringUI(running) {
         isMeasuring = running;
-
         document.getElementById("state").innerHTML =
-          "State: " + (running ? "Measuring..." : "Standby");
+          "State: " + (running ? "Measuring..." : "Standby") +
+          ` <span id="mode-badge" class="badge ${dualMode ? 'badge-dual' : 'badge-single'}">${dualMode ? 'DUAL' : 'SINGLE'}</span>`;
         document.getElementById("toggle-btn").checked = running;
-
-        // Download-Button ein/aus
-        const dlBtn = document.getElementById("download-btn");
-        if (dlBtn) dlBtn.disabled = running;
-
-        if (running) {
-          startMeasurement();
-        } else {
-          stopMeasurement();
-        }
+        document.getElementById("download-btn").disabled = running;
+        if (running) { isMeasuring = true; startTime = Date.now() / 1000; createNewCharts(); }
+        else          { isMeasuring = false; }
       }
 
-      // Binär -> CSV im Browser
+      // ── CSV-Download (7 Floats pro Record: time, x1,y1,z1, x2,y2,z2) ──────
       async function downloadAndConvert() {
         try {
-          // 1. Binärdaten vom ESP holen
           const response = await fetch("/downloadBin");
-          if (!response.ok) {
-            alert("Fehler beim Download: " + response.status);
-            return;
-          }
+          if (!response.ok) { alert("Fehler: " + response.status); return; }
 
-          const buffer = await response.arrayBuffer();
+          const buf        = await response.arrayBuffer();
+          const recordSize = 7 * 4;   // 7 floats × 4 Bytes = 28 Bytes
+          const view       = new DataView(buf);
+          const numRecords = Math.floor(buf.byteLength / recordSize);
 
-          // => 4 Floats (time, x, y, z), Little-Endian
-          const recordSize = 4 * 4; // 4 floats * 4 bytes
-          const view = new DataView(buffer);
-          const numRecords = Math.floor(buffer.byteLength / recordSize);
+          console.log(`${buf.byteLength} Bytes → ${numRecords} Datenpunkte`);
 
-          console.log("Bytes:", buffer.byteLength, "Records:", numRecords);
-
-          const lines = [];
-          lines.push("Time [s];X [m/s^2];Y [m/s^2];Z [m/s^2]");
+          const lines = ["Time [s];X1 [m/s²];Y1 [m/s²];Z1 [m/s²];X2 [m/s²];Y2 [m/s²];Z2 [m/s²]"];
+          const fmt   = (v, d=2) => v.toFixed(d).replace(".", ",");
 
           for (let i = 0; i < numRecords; i++) {
-            const offset = i * recordSize;
-
-            const time = view.getFloat32(offset + 0, true); // little endian
-            const x = view.getFloat32(offset + 4, true);
-            const y = view.getFloat32(offset + 8, true);
-            const z = view.getFloat32(offset + 12, true);
-
-            const tStr = time.toFixed(4).replace(".", ",");
-            const xStr = x.toFixed(2).replace(".", ",");
-            const yStr = y.toFixed(2).replace(".", ",");
-            const zStr = z.toFixed(2).replace(".", ",");
-
-            lines.push(`${tStr};${xStr};${yStr};${zStr}`);
+            const o  = i * recordSize;
+            const t  = view.getFloat32(o +  0, true);
+            const x1 = view.getFloat32(o +  4, true);
+            const y1 = view.getFloat32(o +  8, true);
+            const z1 = view.getFloat32(o + 12, true);
+            const x2 = view.getFloat32(o + 16, true);
+            const y2 = view.getFloat32(o + 20, true);
+            const z2 = view.getFloat32(o + 24, true);
+            lines.push(`${fmt(t,4)};${fmt(x1)};${fmt(y1)};${fmt(z1)};${fmt(x2)};${fmt(y2)};${fmt(z2)}`);
           }
 
-          const csvContent = lines.join("\r\n");
-
-          // 3. CSV-Download im Browser auslösen
-          const blob = new Blob([csvContent], {
-            type: "text/csv;charset=utf-8;",
-          });
-          const url = URL.createObjectURL(blob);
-
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = "converted_data.csv";
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        } catch (err) {
+          const blob = new Blob([lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+          const url  = URL.createObjectURL(blob);
+          const a    = Object.assign(document.createElement("a"),
+                         { href: url, download: "brasense_data.csv" });
+          document.body.appendChild(a); a.click();
+          document.body.removeChild(a); URL.revokeObjectURL(url);
+        } catch(err) {
           console.error(err);
-          alert("Fehler bei Download/Konvertierung (Details in der Konsole).");
+          alert("Fehler beim Download (Details in der Konsole).");
         }
       }
 
-      function startMeasurement() {
-        isMeasuring = true;
-        startTime = Date.now() / 1000;
-        createNewChart();
-      }
-
-      function stopMeasurement() {
-        isMeasuring = false;
-      }
-
-      function createNewChart() {
+      // ── Charts: pro Messung je 1 Chart für Sensor 1 und Sensor 2 ──────────
+      function createNewCharts() {
         chartCounter++;
+        const container = document.getElementById("charts-container");
 
-        let chartContainer = document.createElement("div");
-        chartContainer.style.textAlign = "center";
-        chartContainer.style.marginBottom = "40px";
+        const pair = ["Sensor 1", "Sensor 2"].map((label, idx) => {
+          const wrap   = document.createElement("div");
+          wrap.style.cssText = "text-align:center;margin-bottom:30px";
+          const title  = document.createElement("h3");
+          title.innerText = `Measurement #${chartCounter} – ${label}`;
+          const canvas = document.createElement("canvas");
+          canvas.id    = `chart_${chartCounter}_s${idx+1}`;
+          wrap.appendChild(title);
+          wrap.appendChild(canvas);
+          container.insertBefore(wrap, container.firstChild);
 
-        let chartTitle = document.createElement("h3");
-        chartTitle.innerText = "Measurement #" + chartCounter;
-        chartTitle.style.marginBottom = "5px";
-
-        let canvas = document.createElement("canvas");
-        canvas.id = "chart" + chartCounter;
-        canvas.style.marginTop = "10px";
-
-        chartContainer.appendChild(chartTitle);
-        chartContainer.appendChild(canvas);
-
-        let chartsContainer = document.getElementById("charts-container");
-        chartsContainer.insertBefore(
-          chartContainer,
-          chartsContainer.firstChild
-        );
-
-        let ctx = canvas.getContext("2d");
-        let newChart = new Chart(ctx, {
-          type: "line",
-          data: {
-            labels: [],
-            datasets: [
-              { label: "X-Axis", borderColor: "red", data: [], fill: false },
-              { label: "Y-Axis", borderColor: "green", data: [], fill: false },
-              { label: "Z-Axis", borderColor: "blue", data: [], fill: false },
-            ],
-          },
-          options: {
-            responsive: true,
-            scales: {
-              x: { type: "linear", position: "bottom" },
-              y: { beginAtZero: false },
+          return new Chart(canvas.getContext("2d"), {
+            type: "line",
+            data: {
+              labels: [],
+              datasets: [
+                { label: "X", borderColor: "red",   data: [], fill: false, pointRadius: 0 },
+                { label: "Y", borderColor: "green", data: [], fill: false, pointRadius: 0 },
+                { label: "Z", borderColor: "blue",  data: [], fill: false, pointRadius: 0 },
+              ],
             },
-          },
+            options: {
+              animation: false,
+              responsive: true,
+              scales: {
+                x: { type: "linear", position: "bottom" },
+                y: { beginAtZero: false },
+              },
+            },
+          });
         });
 
-        charts.push(newChart);
+        charts.push(pair);
       }
 
-      function updateCurrentChart(x, y, z) {
-        if (charts.length === 0 || !isMeasuring) return; // Falls keine Messung läuft, nichts tun
+      function updateCharts(x1,y1,z1, x2,y2,z2) {
+        if (charts.length === 0 || !isMeasuring) return;
+        const pair = charts[charts.length - 1];
+        const t    = Date.now() / 1000 - startTime;
 
-        let currentChart = charts[charts.length - 1];
-        let timestamp = Date.now() / 1000 - startTime;
-
-        if (currentChart.data.labels.length > 300) {
-          currentChart.data.labels.shift();
-          currentChart.data.datasets[0].data.shift();
-          currentChart.data.datasets[1].data.shift();
-          currentChart.data.datasets[2].data.shift();
-        }
-
-        currentChart.data.labels.push(timestamp);
-        currentChart.data.datasets[0].data.push({ x: timestamp, y: x });
-        currentChart.data.datasets[1].data.push({ x: timestamp, y: y });
-        currentChart.data.datasets[2].data.push({ x: timestamp, y: z });
-        currentChart.update("none");
+        [[x1,y1,z1], [x2,y2,z2]].forEach((vals, i) => {
+          const c = pair[i];
+          if (c.data.labels.length > 300) {
+            c.data.labels.shift();
+            c.data.datasets.forEach(d => d.data.shift());
+          }
+          c.data.labels.push(t);
+          c.data.datasets[0].data.push({ x: t, y: vals[0] });
+          c.data.datasets[1].data.push({ x: t, y: vals[1] });
+          c.data.datasets[2].data.push({ x: t, y: vals[2] });
+          c.update("none");
+        });
       }
     </script>
   </body>
 </html>
-)rawliteral"; 
+)rawliteral";
 #endif // INDEX_H

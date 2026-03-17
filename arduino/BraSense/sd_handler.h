@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <EEPROM.h>
 #include <SD.h>
+#include <SPI.h>
 
 extern uint16_t fileCounter;
 extern String currentFileName;

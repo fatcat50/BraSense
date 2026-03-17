@@ -1,169 +1,175 @@
 #include "measurement.h"
 
-#include <Wire.h>
-
+#include <SPI.h>
 #include "esp_timer.h"
 #include "sd_handler.h"
 #include "websocket_handler.h"
 
-#define BUTTON_PIN 2
 #define DEBOUNCE_DELAY 50
 
-bool isMeasuring = false;
-bool firstMeasurement = false;
-uint16_t recordCounter = 0;
+// ── Globale Variablen ─────────────────────────────────────────────────────────
+bool isMeasuring       = false;
+bool firstMeasurement  = false;
+uint16_t recordCounter     = 0;
 uint32_t measurementCounter = 0;
 unsigned long measurementStartTime = 0;
 
-datapoint buffer[ARR_SIZE];
-datapoint buffer1[ARR_SIZE];
-datapoint buffer2[ARR_SIZE];
+datapoint buffer [ARR_SIZE];   // wird von sdTask als Empfangspuffer genutzt
+datapoint buffer1[ARR_SIZE];   // Ping-Pong-Buffer A
+datapoint buffer2[ARR_SIZE];   // Ping-Pong-Buffer B
 datapoint* currentBuffer = buffer1;
-datapoint* writeBuffer = buffer2;
+datapoint* writeBuffer   = buffer2;
 size_t bufferIndex = 0;
 
-QueueHandle_t sdQueue = xQueueCreate(10, sizeof(datapoint[ARR_SIZE]));
+QueueHandle_t    sdQueue   = xQueueCreate(10, sizeof(datapoint[ARR_SIZE]));
+SemaphoreHandle_t spiMutex = NULL;  // wird in initMTi() angelegt
 
-bool buttonState = HIGH;
+bool buttonState     = HIGH;
 bool lastButtonState = HIGH;
 unsigned long lastDebounceTime = 0;
-MTi* MyMTi = NULL;
 
-float currentX = 0.0;
-float currentY = 0.0;
-float currentZ = 0.0;
+MTi* MyMTi1 = NULL;
+MTi* MyMTi2 = NULL;
 
-void print() {
-    Serial.print("Measurement " + String(recordCounter) + " : ");
-    Serial.println(isMeasuring ? "STARTED" : "STOPPED");
-    // digitalWrite(LED_BUILTIN, isMeasuring);
+float currentX1 = 0.0f, currentY1 = 0.0f, currentZ1 = 0.0f;
+float currentX2 = 0.0f, currentY2 = 0.0f, currentZ2 = 0.0f;
+
+// ── Hilfsfunktion: Sensor konfigurieren ──────────────────────────────────────
+static void configureSensor(MTi* sensor) {
+    sensor->goToConfig();
+    sensor->requestDeviceInfo();
+    sensor->configureOutputs();
+    sensor->goToMeasurement();
 }
 
+// ── MTi Initialisierung (SPI) ─────────────────────────────────────────────────
 void initMTi() {
-    pinMode(3, INPUT);
-    Wire.begin();
-    Wire.setClock(400000);
-    delay(500);  // Delay 0.5sec to allow I2C bus to stabilize
+    // Mutex für SPI-Bus-Schutz anlegen
+    spiMutex = xSemaphoreCreateMutex();
 
-    MyMTi = new MTi(0x6B, 3);
-    if (!MyMTi->detect(1000)) {
-        Serial.println("MTi not detected. Check connections.");
-        while (1);
+    // CS-Pins sofort HIGH setzen, bevor SPI startet
+    pinMode(MTI1_CS,   OUTPUT); digitalWrite(MTI1_CS,   HIGH);
+    pinMode(MTI2_CS,   OUTPUT); digitalWrite(MTI2_CS,   HIGH);
+    pinMode(PIN_CS_SD, OUTPUT); digitalWrite(PIN_CS_SD, HIGH);
+
+    pinMode(MTI1_DRDY, INPUT);
+    pinMode(MTI2_DRDY, INPUT);
+
+    // SPI-Bus starten (Board-Package setzt GPIO38/47/48 automatisch)
+    SPI.begin(PIN_SCK, PIN_MISO, PIN_MOSI);
+
+    delay(500);  // MTi Boot-Zeit
+
+    // ── Sensor 1 (Pflicht) ────────────────────────────────────────────────────
+    MyMTi1 = new MTi(MTI1_CS, MTI1_DRDY);
+    if (!MyMTi1->detect(1000)) {
+        Serial.println("FEHLER: Sensor #1 nicht gefunden! Verbindung prüfen.");
+        while (1);  // Ohne Sensor 1 läuft gar nichts
     }
-    MyMTi->goToConfig();
-    MyMTi->requestDeviceInfo();
-    MyMTi->configureOutputs();
-    MyMTi->goToMeasurement();
+    configureSensor(MyMTi1);
+    Serial.println("Sensor #1 gefunden ✓");
+
+    // ── Sensor 2 (Optional, Auto-Detect) ─────────────────────────────────────
+    MyMTi2 = new MTi(MTI2_CS, MTI2_DRDY);
+    if (!MyMTi2->detect(1000)) {
+        Serial.println("Info: Sensor #2 nicht gefunden → Single-Sensor-Modus.");
+        delete MyMTi2;
+        MyMTi2 = NULL;  // NULL = nicht vorhanden, wird überall abgefragt
+    } else {
+        configureSensor(MyMTi2);
+        Serial.println("Sensor #2 gefunden ✓ → Dual-Sensor-Modus.");
+    }
 }
 
+// ── Messung starten ───────────────────────────────────────────────────────────
 void startMeasurement() {
-    isMeasuring = true;
+    isMeasuring      = true;
     firstMeasurement = true;
     recordCounter++;
     measurementCounter = 0;
 
     openFile();
-    // file.println(">>>> Measurement #" + String(recordCounter) + " START
-    // <<<<"); file.println("Time [s];Data Point;X [deg];Y [deg];Z [deg]");
-    // print();
-    while (digitalRead(MyMTi->drdy)) {
-        MyMTi->readMessages();
+
+    // DRDY-Puffer leeren
+    while (digitalRead(MTI1_DRDY)) MyMTi1->readMessages();
+    if (MyMTi2 != NULL) {
+        while (digitalRead(MTI2_DRDY)) MyMTi2->readMessages();
     }
-    ws.textAll(String(isMeasuring));
-    // MyMTi->goToMeasurement();
+
+    ws.textAll("1");
 }
 
+// ── Messung stoppen ───────────────────────────────────────────────────────────
 void stopMeasurement() {
-    // MyMTi->goToConfig();
     isMeasuring = false;
-
-    // file.println(">>>> Measurement #" + String(recordCounter) + " STOP
-    // <<<<");
     file.close();
-    // print();
-    ws.textAll(String(isMeasuring));
+    ws.textAll("0");
 }
 
-// Logs the measurement data to the SD card and WebSocket
+// ── Datenpunkt erfassen (wird von sensorTask aufgerufen) ──────────────────────
 void logMeasurementData() {
     if (firstMeasurement) {
         measurementStartTime = esp_timer_get_time();
         firstMeasurement = false;
     }
-    float timestamp = (esp_timer_get_time() - measurementStartTime) / 1e6;
+    float ts = (esp_timer_get_time() - measurementStartTime) / 1e6f;
 
-    float* angles = MyMTi->getAcceleration();
-    currentX = angles[0];
-    currentY = angles[1];
-    currentZ = angles[2];
+    // SPI-Bus sichern (SD-Task läuft parallel auf Core 0)
+    if (xSemaphoreTake(spiMutex, pdMS_TO_TICKS(5)) == pdTRUE) {
 
-    currentBuffer[bufferIndex] = {timestamp, currentX, currentY, currentZ};
-    bufferIndex++;
+        // Sensor 1
+        if (digitalRead(MTI1_DRDY)) {
+            MyMTi1->readMessages();
+            float* a = MyMTi1->getAcceleration();
+            currentX1 = a[0]; currentY1 = a[1]; currentZ1 = a[2];
+        }
 
-    if (bufferIndex >= ARR_SIZE) {
-        // Swap buffers
-        datapoint* tempBuffer = currentBuffer;
-        currentBuffer = writeBuffer;
-        writeBuffer = tempBuffer;
+        // Sensor 2 (nur wenn vorhanden)
+        if (MyMTi2 != NULL && digitalRead(MTI2_DRDY)) {
+            MyMTi2->readMessages();
+            float* a = MyMTi2->getAcceleration();
+            currentX2 = a[0]; currentY2 = a[1]; currentZ2 = a[2];
+        } else if (MyMTi2 == NULL) {
+            currentX2 = 0.0f; currentY2 = 0.0f; currentZ2 = 0.0f;
+        }
 
-        // Send the full buffer to the queue
-        xQueueSend(sdQueue, writeBuffer,
-                   pdMS_TO_TICKS(100));  // Core 0 übernimmt
-        bufferIndex = 0;
+        xSemaphoreGive(spiMutex);
     }
 
-    /*char timeStr[10];
-    measurementCounter++;
-    dtostrf(timestamp, 7, 3, timeStr);
-    file.print(timeStr);
-    file.print(";");
+    // In Ping-Pong-Buffer schreiben
+    currentBuffer[bufferIndex++] = {
+        ts,
+        currentX1, currentY1, currentZ1,
+        currentX2, currentY2, currentZ2
+    };
 
-    char cnt[32];
-    dtostrf(measurementCounter, 8, 2, cnt);
-
-    file.print(cnt);
-    file.print(";");
-    if (!isnan(MyMTi->getEulerAngles()[0])) {
-        for (int i = 0; i < 3; ++i) {
-            char str[32];
-            dtostrf(MyMTi->getEulerAngles()[i], 8, 2, str);
-            file.print(str);
-            if (i < 2) file.print(";");
-        }
-        file.println();
-
-        /*if (measurementCounter % FLUSH_INTERVAL == 0) {
-            file.flush();  // SD-Puffer leeren
-            // Serial.println("FLUSHED");
-            //delay(1);  // Watchdog-Reset ermöglichen
-        }*/
-    //}
+    if (bufferIndex >= ARR_SIZE) {
+        datapoint* tmp = currentBuffer;
+        currentBuffer  = writeBuffer;
+        writeBuffer    = tmp;
+        xQueueSend(sdQueue, writeBuffer, pdMS_TO_TICKS(100));
+        bufferIndex = 0;
+    }
 }
 
+// ── Initialisierung ───────────────────────────────────────────────────────────
 void initMeasurement() {
     pinMode(BUTTON_PIN, INPUT_PULLUP);
-    pinMode(LED_BUILTIN, OUTPUT);
-    digitalWrite(LED_BUILTIN, LOW);
+    // LED_BUILTIN (GPIO48) = SCK → nicht nutzbar, kein pinMode nötig
 }
 
+// ── Button (Entprellung) ──────────────────────────────────────────────────────
 void handleButtonPress() {
     int reading = digitalRead(BUTTON_PIN);
 
-    if (reading != lastButtonState) {
+    if (reading != lastButtonState)
         lastDebounceTime = millis();
-    }
 
     if ((millis() - lastDebounceTime) > DEBOUNCE_DELAY) {
         if (reading != buttonState) {
             buttonState = reading;
             if (buttonState == LOW) {
-                isMeasuring = !isMeasuring;
-
-                if (isMeasuring) {
-                    startMeasurement();
-                } else {
-                    stopMeasurement();
-                }
+                isMeasuring ? stopMeasurement() : startMeasurement();
             }
         }
     }

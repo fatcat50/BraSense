@@ -1,6 +1,7 @@
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <SD.h>
+#include <SPI.h>
 #include <WiFi.h>
 #include <esp_system.h>
 
@@ -14,28 +15,31 @@
 
 void setup() {
     Serial.begin(115200);
-    esp_reset_reason_t reason = esp_reset_reason();
 
-    initWiFi();
-    initTime();
-    initMeasurement();
+    // 1. SPI-Bus + Sensoren (SPI.begin() passiert hier)
+    initMTi();
+
+    // 2. SD-Karte (nutzt denselben SPI-Bus)
     initSDCard();
     loadFileCounter();
     createNewMeasurementFile();
-    setupWebSocket();
-    createTasks();
-    initMTi();
 
-    // Serial.print("Reset reason: ");
-    // Serial.println((int)reason);
+    // 3. WiFi + Zeit
+    initWiFi();
+    initTime();
+
+    // 4. WebSocket-Server
+    setupWebSocket();
+
+    // 5. Button-Pin konfigurieren
+    initMeasurement();
+
+    // 6. FreeRTOS-Tasks starten (sensorTask übernimmt ab jetzt die Messung)
+    createTasks();
 }
 
 void loop() {
-    if (digitalRead(MyMTi->drdy)) {
-        MyMTi->readMessages();
-        if (isMeasuring) {
-            logMeasurementData();
-        }
-    }
+    // Sensor-Messung läuft in sensorTask (Core 1) → hier nur Button
     handleButtonPress();
+    vTaskDelay(pdMS_TO_TICKS(10));  // Core 1 für sensorTask freigeben
 }
