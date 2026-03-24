@@ -13,14 +13,14 @@ const int   daylightOffset_sec = 3600;
 AsyncWebSocket  ws("/ws");
 AsyncWebServer  server(80);
 
-// 6 Floats + JSON-Overhead: {"x1":XX.XX,"y1":XX.XX,"z1":XX.XX,"x2":XX.XX,"y2":XX.XX,"z2":XX.XX}
+// 6 Floats + JSON overhead: {"x1":XX.XX,"y1":XX.XX,"z1":XX.XX,"x2":XX.XX,"y2":XX.XX,"z2":XX.XX}
 char json[128];
 
 void initWiFi() {
     WiFi.begin(ssid, password);
     WiFi.setSleep(false);
 
-    Serial.print("Verbinde mit WiFi");
+    Serial.print("Connecting to WiFi");
     while (WiFi.status() != WL_CONNECTED) {
         Serial.print('.');
         delay(1000);
@@ -35,7 +35,7 @@ void initTime() {
 void printLocalTime() {
     struct tm timeinfo;
     if (!getLocalTime(&timeinfo)) {
-        Serial.println("Zeitabfrage fehlgeschlagen.");
+        Serial.println("Failed to obtain time.");
         return;
     }
     Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
@@ -51,11 +51,11 @@ void setupWebSocket() {
 
     server.on("/downloadBin", HTTP_GET, [](AsyncWebServerRequest *request) {
         if (isMeasuring) {
-            request->send(403, "text/plain", "Messung zuerst stoppen!");
+            request->send(403, "text/plain", "Stop measurement first!");
             return;
         }
         if (!SD.exists(currentFileName)) {
-            request->send(404, "text/plain", "Datei nicht gefunden.");
+            request->send(404, "text/plain", "File not found.");
             return;
         }
         auto *response = request->beginResponse(
@@ -83,11 +83,11 @@ void eventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client,
                   AwsEventType type, void *arg, uint8_t *data, size_t len) {
     switch (type) {
         case WS_EVT_CONNECT:
-            Serial.printf("WS Client #%u verbunden (%s)\n",
+            Serial.printf("WS Client #%u connected (%s)\n",
                           client->id(), client->remoteIP().toString().c_str());
             break;
         case WS_EVT_DISCONNECT:
-            Serial.printf("WS Client #%u getrennt\n", client->id());
+            Serial.printf("WS Client #%u disconnected\n", client->id());
             break;
         case WS_EVT_DATA:
             handleWebSocketMessage(arg, data, len);

@@ -16,30 +16,30 @@
 void setup() {
     Serial.begin(115200);
 
-    // 1. SPI-Bus + Sensoren (SPI.begin() passiert hier)
+    // 1. SPI bus + sensors (SPI.begin() happens here)
     initMTi();
 
-    // 2. SD-Karte (nutzt denselben SPI-Bus)
+    // 2. SD card (uses the same SPI bus)
     initSDCard();
     loadFileCounter();
     createNewMeasurementFile();
 
-    // 3. WiFi + Zeit
+    // 3. WiFi + time
     initWiFi();
     initTime();
 
-    // 4. WebSocket-Server
+    // 4. WebSocket server
     setupWebSocket();
 
-    // 5. Button-Pin konfigurieren
+    // 5. Configure button pin
     initMeasurement();
 
-    // 6. FreeRTOS-Tasks starten (sensorTask übernimmt ab jetzt die Messung)
+    // 6. Start FreeRTOS tasks (sensorTask takes over measurement from here)
     createTasks();
 }
 
 void loop() {
-    // Sensor-Messung läuft in sensorTask (Core 1) → hier nur Button
+    // Sensor measurement runs in sensorTask (Core 1) -> only button here
     handleButtonPress();
-    vTaskDelay(pdMS_TO_TICKS(10));  // Core 1 für sensorTask freigeben
+    vTaskDelay(pdMS_TO_TICKS(10));  // Free up Core 1 for sensorTask
 }
