@@ -1,5 +1,5 @@
 #include "websocket_handler.h"
-
+#include <WiFi.h>
 #include "index.h"
 #include "measurement.h"
 

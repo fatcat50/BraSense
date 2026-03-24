@@ -47,6 +47,10 @@ void initMTi() {
     // Mutex für SPI-Bus-Schutz anlegen
     spiMutex = xSemaphoreCreateMutex();
 
+    ledcSetup(0, 500, 8);
+    ledcAttachPin(SYNC_PIN, 0);
+    ledcWrite(0, 127);
+
     // CS-Pins sofort HIGH setzen, bevor SPI startet
     pinMode(MTI1_CS,   OUTPUT); digitalWrite(MTI1_CS,   HIGH);
     pinMode(MTI2_CS,   OUTPUT); digitalWrite(MTI2_CS,   HIGH);

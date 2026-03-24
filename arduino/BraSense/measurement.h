@@ -27,6 +27,7 @@
 
 // Button → GPIO0 = B1, hat internen Pullup
 #define BUTTON_PIN   0
+#define SYNC_PIN 25
 
 // ── Externe Variablen ─────────────────────────────────────────────────────────
 extern bool isMeasuring;
