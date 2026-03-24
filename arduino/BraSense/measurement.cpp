@@ -114,14 +114,14 @@ void logMeasurementData() {
         // Sensor 1
         if (digitalRead(MTI1_DRDY)) {
             MyMTi1->readMessages();
-            float* a = MyMTi1->getAcceleration();
+            float* a = MyMTi1->getEulerAngles();
             currentX1 = a[0]; currentY1 = a[1]; currentZ1 = a[2];
         }
 
         // Sensor 2
         if (MyMTi2 != NULL && digitalRead(MTI2_DRDY)) {
             MyMTi2->readMessages();
-            float* a = MyMTi2->getAcceleration();
+            float* a = MyMTi2->getEulerAngles();
             currentX2 = a[0]; currentY2 = a[1]; currentZ2 = a[2];
         } else if (MyMTi2 == NULL) {
             currentX2 = 0.0f; currentY2 = 0.0f; currentZ2 = 0.0f;

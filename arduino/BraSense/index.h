@@ -56,7 +56,6 @@ const char index_html[] PROGMEM = R"rawliteral(
     <button id="download-btn" onclick="downloadAndConvert()">Download CSV</button>
 
     <div id="charts-container"></div>
-
     <script src="https://cdn.jsdelivr.net/npm/chart.js/dist/chart.umd.min.js"></script>
     <script>
       var websocket;
